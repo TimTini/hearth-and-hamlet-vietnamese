@@ -1,0 +1,18 @@
+{
+  "tools": [
+    {
+      "id": "gdre-tools",
+      "version": "2.7.0",
+      "asset": "GDRE_tools-v2.7.0-windows.zip",
+      "url": "https://github.com/GDRETools/gdsdecomp/releases/download/v2.7.0/GDRE_tools-v2.7.0-windows.zip",
+      "sha256": "92a8d5d3d5c0cca159fc6cc34ebdda2cf7e1b448035cdabe1a67f0981cbd0a2c"
+    },
+    {
+      "id": "godot",
+      "version": "4.6.3-stable",
+      "asset": "Godot_v4.6.3-stable_win64.exe.zip",
+      "url": "https://github.com/godotengine/godot-builds/releases/download/4.6.3-stable/Godot_v4.6.3-stable_win64.exe.zip",
+      "sha256": "e39986a178d585ce7ac198fb8de6ea436366dc0cc00e594810c2e3e104c04b90"
+    }
+  ]
+}
