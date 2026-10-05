@@ -8,3 +8,29 @@ gói cài thử. Theo dõi checkpoint tại
 
 Repo này chỉ lưu script, kiểm thử và nội dung dịch do dự án tạo ra. Không
 commit file thực thi, PCK, asset hoặc dữ liệu đã trích xuất từ game.
+
+## Phát triển toolchain
+
+Cần Python 3.12+ và `uv`. Từ thư mục repo, chạy:
+
+```powershell
+uv sync --locked
+uv run pytest
+uv run ruff check src tests/python
+```
+
+Task 1 có API Python xác minh build chỉ đọc tại `src/hnh_vi/builds.py`:
+`load_build_specs`, `sha256_file` và `verify_game_dir`. Manifest
+`manifests/game-builds.json` hỗ trợ EXE 1.1.0.0, Steam build `25600292`;
+hash EXE/PCK phải khớp để xác minh thành công. `exe_version` là metadata của
+build được duyệt; verifier dùng hash để xác định đúng binary.
+
+`verify_game_dir` trả `VerificationResult(ok, issues)` với issue code theo
+thứ tự EXE, PCK rồi Steam: `missing_file`, `hash_mismatch`,
+`steam_build_mismatch`. Khi truyền `appmanifest`, build ID Steam cũng phải
+khớp. Không truyền file này thì chỉ xác minh fingerprint EXE/PCK.
+Hàm không ghi file hoặc in dữ liệu; lỗi đọc file/JSON được báo cho caller.
+Tên EXE/PCK trong manifest phải là tên file, không chứa đường dẫn.
+
+Kiểm thử chỉ dùng file tổng hợp trong thư mục tạm, không truy cập game thật.
+CLI và script cài/gỡ chưa được triển khai.
