@@ -1,0 +1,21 @@
+# Local toolchain and Python environment
+.tools/
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# Extracted/proprietary game data and generated packages
+extracted/
+workspace/
+dist/
+backups/
+*.pck
+*.exe
+*.dll
+
+# Temporary files
+*.tmp
+*.bak
+*.log
