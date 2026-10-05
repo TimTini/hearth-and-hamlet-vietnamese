@@ -34,3 +34,17 @@ Tên EXE/PCK trong manifest phải là tên file, không chứa đường dẫn.
 
 Kiểm thử chỉ dùng file tổng hợp trong thư mục tạm, không truy cập game thật.
 CLI và script cài/gỡ chưa được triển khai.
+
+## Extraction và probe chỉ đọc
+
+`scripts/extract.ps1 -GameDir <path>` và `scripts/probe.ps1 -GameDir <path>` xác minh
+build/tool trước khi chạy. Trong suốt quá trình, PowerShell giữ handle EXE/PCK với
+`FileShare.Read`: GDRE/Python vẫn đọc được, nhưng Windows từ chối mở để ghi hoặc
+xóa hai file nguồn, kể cả qua hard link tạo sau bước kiểm tra. Handle được release
+trong `finally` khi script kết thúc. Snapshot/report JSON dùng file tạm rồi atomic
+replace, không truncate output cũ.
+
+Output chỉ nằm dưới `workspace/<build-id>/` bị ignore. Extraction từ chối source
+không rỗng với `workspace_source_not_empty`; không tự xóa hoặc dùng lại CSV cũ.
+Build thật hiện chưa có snapshot hợp lệ: probe báo `translation_recovery_incomplete`
+với 27/1.849 key chưa phục hồi. Xem checkpoint Task 3 trước khi tiếp tục pipeline.

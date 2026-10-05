@@ -114,3 +114,18 @@ bị Git ignore. Không commit nội dung CSV hoặc script được phục hồ
   71 passed; Ruff và diff check sạch.
 - Probe thật sau sửa vẫn trả exit 2, locale dynamic, 27/1.849 key không phục hồi,
   hash CSV/script/EXE/PCK không đổi. Task 3 tiếp tục BLOCKED; không bắt đầu Task 4.
+
+### Task 3 — fix round 2, 2026-10-06
+
+- EXE/PCK được giữ bằng handle `FileShare.Read` từ trước writer GDRE/PowerShell
+  đến sau snapshot/report Python; xác minh lại build khi handle còn sống và release
+  trong `finally`. Alias tạo sau gate không thể mở hai file nguồn để ghi/xóa.
+- Snapshot/report JSON cùng dùng writer atomic; không truncate inode output cũ.
+- Watcher thực trên fixture đã RED → GREEN ở cả probe Out-File, GDRE extraction
+  và Python report. Đổi share mode sang cho phép write/delete tái hiện lỗi GDRE;
+  khôi phục read-only làm test xanh. Reader vẫn hoạt động; handle release đã test.
+- Focused 27 passed; integration 8 passed/19 deselected. Full cuối 76 passed;
+  Ruff/diff check sạch. Watcher test đồng bộ theo lifecycle process, tránh deadline
+  khởi động tùy ý khi verification chậm.
+- Probe F: → H: vẫn trả exit 2, dynamic locale, thiếu 27/1.849 key; các hash nguồn
+  và CSV/script đã nêu không đổi. Task 3 vẫn BLOCKED; Task 4 chưa bắt đầu.

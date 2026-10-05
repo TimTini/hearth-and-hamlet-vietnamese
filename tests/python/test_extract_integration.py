@@ -2,10 +2,12 @@ import json
 import shutil
 import subprocess
 import sys
+import threading
 from pathlib import Path
 
 import pytest
 
+from hnh_vi import workspace as workspace_module
 from hnh_vi.builds import sha256_file
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -185,4 +187,120 @@ def test_extract_rejects_stale_csv_when_current_pck_has_no_csv(tmp_path: Path) -
     assert "workspace_source_not_empty" in result.stdout + result.stderr
     assert not (workspace / "snapshot.json").exists()
     assert stale.read_bytes() == b"key,en\nstale,Old source\n"
+    assert {path.name: sha256_file(path) for path in game.iterdir()} == before
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("target", ["Game fixture.exe", "Game fixture.pck"])
+def test_probe_late_recovery_log_alias_cannot_change_game(tmp_path: Path, target: str) -> None:
+    repo, game = make_packed_game(tmp_path)
+    probe_dir = repo / "workspace/fixture/probe"
+    before = {path.name: sha256_file(path) for path in game.iterdir()}
+    watcher_errors = []
+    attempted = threading.Event()
+    finished = threading.Event()
+
+    def insert_alias() -> None:
+        while not (probe_dir / "gdre-version.txt").exists():
+            if finished.wait(0.001):
+                watcher_errors.append("probe exited before version output appeared")
+                return
+        attempted.set()
+        guard_check = subprocess.run([
+            sys.executable, "-c",
+            ("import pathlib, sys\n"
+            "for name in sys.argv[1:]:\n"
+            "    path = pathlib.Path(name)\n"
+            "    try:\n"
+            "        with path.open('r+b'):\n"
+            "            sys.exit('write access was allowed')\n"
+            "    except PermissionError:\n"
+            "        pass\n"
+            "    try:\n"
+            "        path.unlink()\n"
+            "        sys.exit('delete access was allowed')\n"
+            "    except PermissionError:\n"
+            "        pass\n"),
+            str(game / "Game fixture.exe"), str(game / "Game fixture.pck"),
+        ], capture_output=True, text=True, check=False)
+        if guard_check.returncode:
+            watcher_errors.append(guard_check.stdout + guard_check.stderr)
+        try:
+            (probe_dir / "recovery.log").hardlink_to(game / target)
+        except PermissionError:
+            pass  # Windows may also deny creation of an alias to a protected file.
+        except OSError as error:
+            watcher_errors.append(str(error))
+
+    watcher = threading.Thread(target=insert_alias)
+    watcher.start()
+    try:
+        result = subprocess.run([
+            "powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
+            str(ROOT / "scripts/probe.ps1"), "-RepoRoot", str(repo), "-GameDir", str(game),
+        ], capture_output=True, text=True, encoding="utf-8", errors="replace", check=False)
+    finally:
+        finished.set()
+    watcher.join()
+    assert attempted.is_set(), watcher_errors
+    assert not watcher_errors
+    assert result.returncode in (1, 2), result.stdout + result.stderr
+    assert {path.name: sha256_file(path) for path in game.iterdir()} == before
+    # Script finally must release both protection handles, even when a writer failed.
+    with (game / target).open("r+b") as source:
+        assert source.read(1)
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("target", ["Game fixture.exe", "Game fixture.pck"])
+def test_extract_late_gdre_output_alias_cannot_change_game(tmp_path: Path, target: str) -> None:
+    repo, game = make_packed_game(tmp_path)
+    before = {path.name: sha256_file(path) for path in game.iterdir()}
+    process = subprocess.Popen([
+        "powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
+        str(ROOT / "scripts/extract.ps1"), "-RepoRoot", str(repo), "-GameDir", str(game),
+    ], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace")
+    started = False
+    for line in process.stdout:
+        if "Godot Engine" in line:
+            started = True
+            alias = repo / "workspace/fixture/source/localisation/translations.csv"
+            alias.parent.mkdir(parents=True, exist_ok=True)
+            try:
+                alias.hardlink_to(game / target)
+            except PermissionError:
+                pass
+            break
+    output, _ = process.communicate()
+    assert started, output
+    assert process.returncode in (0, 1), output
+    assert {path.name: sha256_file(path) for path in game.iterdir()} == before
+    for path in game.iterdir():
+        with path.open("r+b") as source:
+            assert source.read(1)
+
+
+@pytest.mark.integration
+def test_python_report_after_gate_alias_does_not_truncate_game(tmp_path: Path, monkeypatch) -> None:
+    repo, game = make_packed_game(tmp_path)
+    probe = repo / "workspace/fixture/probe"
+    (probe / "source/localisation").mkdir(parents=True)
+    (probe / "source/localisation/translations.csv").write_text("key,en\nfixture,Sample\n")
+    (probe / "recovery.log").write_text("Recovery finished\n")
+    (probe / "gdre-version.txt").write_text("Godot RE Tools v2.7.0")
+    (probe / "godot-version.txt").write_text("4.6.3.stable.official.7d41c59c4")
+    (probe / "pck-files.txt").write_text("res://localisation/translations.csv\n")
+    before = {path.name: sha256_file(path) for path in game.iterdir()}
+    original_context = workspace_module._verified_context
+
+    def inject_after_gate(repo_root: Path, game_dir: Path) -> dict:
+        context = original_context(repo_root, game_dir)
+        (probe / "report.json").hardlink_to(game / "Game fixture.exe")
+        return context
+
+    monkeypatch.setattr(workspace_module, "_verified_context", inject_after_gate)
+    monkeypatch.setattr(sys, "argv", [
+        "workspace", "probe-report", "--repo-root", str(repo), "--game-dir", str(game),
+    ])
+    assert workspace_module.main() in (1, 2)
     assert {path.name: sha256_file(path) for path in game.iterdir()} == before

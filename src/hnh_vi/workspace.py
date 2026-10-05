@@ -35,19 +35,24 @@ def _reject_linked_output(path: Path) -> None:
         raise ValueError("unsafe_workspace: hard-linked output file")
 
 
-def write_snapshot(path: Path, snapshot: WorkspaceSnapshot) -> None:
-    """Atomically replace metadata without truncating an existing output inode."""
+def _write_text_atomic(path: Path, text: str) -> None:
+    """Replace an output entry without ever opening its existing inode for writing."""
     for entry in (path, *path.parents):
         _reject_linked_output(entry)
     with tempfile.NamedTemporaryFile(
         mode="w", encoding="utf-8", newline="\n", dir=path.parent, suffix=".tmp", delete=False,
     ) as stream:
         temporary = Path(stream.name)
-        stream.write(json.dumps(asdict(snapshot), sort_keys=True, indent=2) + "\n")
+        stream.write(text)
     try:
         os.replace(temporary, path)
     finally:
         temporary.unlink(missing_ok=True)
+
+
+def write_snapshot(path: Path, snapshot: WorkspaceSnapshot) -> None:
+    """Atomically replace metadata without truncating an existing output inode."""
+    _write_text_atomic(path, json.dumps(asdict(snapshot), sort_keys=True, indent=2) + "\n")
 
 
 def verify_snapshot(
@@ -168,7 +173,8 @@ def _verified_context(repo_root: Path, game_dir: Path) -> dict[str, str]:
     if tools.keys() != {"gdre", "godot"}:
         raise ValueError("missing_pinned_tools")
     return {
-        "build_id": spec.build_id, "pck": str(game_dir / spec.pck_name),
+        "build_id": spec.build_id, "exe": str(game_dir / spec.exe_name),
+        "pck": str(game_dir / spec.pck_name),
         "workspace": str(workspace), "source_csv": str(workspace / "source/localisation/translations.csv"),
         **tools,
     }
@@ -214,7 +220,7 @@ def main() -> int:
                 ),
             })
             output = json.dumps(report, sort_keys=True, indent=2) + "\n"
-            (workspace / "probe/report.json").write_text(output, encoding="utf-8", newline="\n")
+            _write_text_atomic(workspace / "probe/report.json", output)
             print(output, end="")
             if not report["compatible"]:
                 return 2
