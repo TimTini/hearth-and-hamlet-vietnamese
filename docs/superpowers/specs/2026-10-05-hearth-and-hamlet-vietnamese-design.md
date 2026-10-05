@@ -2,7 +2,7 @@
 
 Ngày: 2026-10-05
 
-Trạng thái: Đã được người dùng duyệt trong trao đổi; chờ duyệt file spec đã lưu
+Trạng thái: Đã được người dùng duyệt ngày 2026-10-05
 
 Repo: `<RepoRoot>`
 
@@ -134,8 +134,13 @@ khi upstream thay đổi. Build chỉ dùng các row hợp lệ của đúng sou
 `translations.vi.csv` phải chứa tối thiểu:
 
 - `key`: khóa localization hoặc định danh ổn định lấy từ CSV nguồn.
-- `source_en`: câu tiếng Anh tại build nguồn.
+- `source_sha256`: fingerprint của câu tiếng Anh tại build nguồn, dùng để phát
+  hiện source drift mà không commit toàn bộ văn bản gốc của game.
 - `translation_vi`: bản dịch tiếng Việt.
+
+Câu tiếng Anh đầy đủ chỉ tồn tại trong source snapshot local bị Git ignore.
+CLI hiển thị source local cạnh bản dịch khi cần rà soát; release và lịch sử Git
+không chứa bảng tiếng Anh trích xuất nguyên vẹn.
 
 `status.csv` tách metadata quy trình khỏi payload được game import:
 

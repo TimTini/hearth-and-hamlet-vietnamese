@@ -18,7 +18,7 @@ Tạo toolchain và bản dịch tiếng Việt tự nhiên, dễ chơi cho Hear
 - [x] Người dùng duyệt thiết kế trong trao đổi.
 - [x] Khởi tạo repo Git local trên nhánh `main`.
 - [x] Viết design spec.
-- [ ] Người dùng duyệt file design spec đã lưu.
+- [x] Người dùng duyệt file design spec đã lưu.
 - [ ] Viết và duyệt implementation plan.
 - [ ] Triển khai Đợt 1 theo TDD.
 - [ ] Review độc lập và verification Đợt 1.
@@ -50,6 +50,8 @@ Tạo toolchain và bản dịch tiếng Việt tự nhiên, dễ chơi cho Hear
 - Tool Godot/PCK sẽ là bản portable ghim phiên bản/checksum trong `.tools/`;
   chưa chọn release cụ thể trước khi lập plan và làm probe tương thích.
 - Không thay đổi thư mục game trong giai đoạn thiết kế.
+- Không commit toàn bộ câu tiếng Anh trích từ game; bảng dịch dùng
+  `source_sha256`, còn source đầy đủ chỉ nằm trong workspace local bị ignore.
 
 ## Việc chưa xác minh
 
