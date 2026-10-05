@@ -9,9 +9,11 @@ import sys
 import tempfile
 import urllib.request
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from pathlib import Path, PureWindowsPath
 from zipfile import BadZipFile, ZipFile
+
+_CACHE_MARKER = ".hnh-tool-cache.json"
 
 
 @dataclass(frozen=True)
@@ -40,11 +42,41 @@ def load_tool_specs(path: Path) -> tuple[ToolSpec, ...]:
     return tuple(ToolSpec(**tool) for tool in manifest["tools"])
 
 
-def ensure_tool(spec: ToolSpec, tools_dir: Path) -> Path:
-    """Reuse an installed tool or download, verify and atomically publish it."""
+def _cache_files(directory: Path) -> dict[str, str]:
+    files = {}
+    for path in directory.rglob("*"):
+        if path.is_symlink() or path.is_junction():
+            raise ValueError("tool_invalid_cache: linked cache entry")
+        if path.is_file() and path != directory / _CACHE_MARKER:
+            with path.open("rb") as source:
+                files[path.relative_to(directory).as_posix()] = hashlib.file_digest(
+                    source, "sha256"
+                ).hexdigest()
+    return files
+
+
+def _cache_is_valid(directory: Path, spec: ToolSpec) -> bool:
+    marker = directory / _CACHE_MARKER
+    if directory.is_symlink() or directory.is_junction() or marker.is_symlink():
+        return False
+    try:
+        metadata = json.loads(marker.read_text(encoding="utf-8"))
+        if not isinstance(metadata, dict) or metadata.get("spec") != asdict(spec):
+            return False
+        files = _cache_files(directory)
+        return bool(files) and metadata.get("files") == files
+    except (OSError, ValueError):
+        return False
+
+
+def ensure_tool(spec: ToolSpec, tools_dir: Path, *, offline: bool = False) -> Path:
+    """Reuse verified cache bytes, or install a verified archive when online."""
     installed = tools_dir / spec.id / spec.version
-    if installed.is_dir():
+    if _cache_is_valid(installed, spec):
         return installed
+    if offline:
+        code = "tool_invalid_cache_offline" if installed.exists() else "tool_missing_offline"
+        raise ValueError(f"{code}: {spec.id} {spec.version}")
 
     installed.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile(
@@ -76,7 +108,18 @@ def ensure_tool(spec: ToolSpec, tools_dir: Path) -> Path:
                 dir=installed.parent, prefix=f".{spec.version}-"
             ) as extracted:
                 archive.extractall(extracted)
-                Path(extracted).rename(installed)
+                extracted_path = Path(extracted)
+                files = _cache_files(extracted_path)
+                if not files:
+                    raise ValueError(f"tool_empty_archive: {spec.id}")
+                (extracted_path / _CACHE_MARKER).write_text(
+                    json.dumps({"spec": asdict(spec), "files": files}), encoding="utf-8"
+                )
+                if installed.is_dir() and not installed.is_symlink() and not installed.is_junction():
+                    shutil.rmtree(installed)
+                elif installed.exists() or installed.is_symlink():
+                    installed.unlink()
+                extracted_path.rename(installed)
         return installed
     finally:
         archive_path.unlink(missing_ok=True)
@@ -92,10 +135,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         for spec in load_tool_specs(args.manifest):
-            installed = args.tools_dir / spec.id / spec.version
-            if args.offline and not installed.is_dir():
-                raise ValueError(f"tool_missing_offline: {spec.id} {spec.version}")
-            ensure_tool(spec, args.tools_dir)
+            ensure_tool(spec, args.tools_dir, offline=args.offline)
     except (OSError, ValueError, KeyError, TypeError, BadZipFile) as error:
         print(str(error), file=sys.stderr)
         return 1
