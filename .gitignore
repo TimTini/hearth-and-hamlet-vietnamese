@@ -1,4 +1,5 @@
 # Local toolchain and Python environment
+.worktrees/
 .tools/
 .venv/
 __pycache__/
