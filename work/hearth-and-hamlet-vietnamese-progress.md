@@ -19,7 +19,8 @@ Tạo toolchain và bản dịch tiếng Việt tự nhiên, dễ chơi cho Hear
 - [x] Khởi tạo repo Git local trên nhánh `main`.
 - [x] Viết design spec.
 - [x] Người dùng duyệt file design spec đã lưu.
-- [ ] Viết và duyệt implementation plan.
+- [x] Viết implementation plan Đợt 1.
+- [ ] Người dùng duyệt implementation plan và cách thực thi.
 - [ ] Triển khai Đợt 1 theo TDD.
 - [ ] Review độc lập và verification Đợt 1.
 - [ ] Dịch và kiểm chứng các đợt 2–4.
@@ -47,8 +48,9 @@ Tạo toolchain và bản dịch tiếng Việt tự nhiên, dễ chơi cho Hear
   `<RepoRoot>`.
 - Dùng PowerShell cho orchestration Windows và Python chạy bằng `uv` cho
   pipeline dữ liệu.
-- Tool Godot/PCK sẽ là bản portable ghim phiên bản/checksum trong `.tools/`;
-  chưa chọn release cụ thể trước khi lập plan và làm probe tương thích.
+- Implementation plan chọn GDRE Tools 2.7.0 và Godot 4.6.3-stable dạng
+  portable, ghim URL/SHA-256 trong manifest; tương thích thực tế vẫn phải qua
+  probe read-only và PCK fixture trước khi patch game thật.
 - Không thay đổi thư mục game trong giai đoạn thiết kế.
 - Không commit toàn bộ câu tiếng Anh trích từ game; bảng dịch dùng
   `source_sha256`, còn source đầy đủ chỉ nằm trong workspace local bị ignore.
@@ -65,6 +67,6 @@ Tạo toolchain và bản dịch tiếng Việt tự nhiên, dễ chơi cho Hear
 ## Bước kế tiếp
 
 1. Người dùng duyệt design spec đã lưu.
-2. Dùng skill writing-plans để tạo implementation plan chi tiết.
-3. Sau khi người dùng duyệt plan và cách thực thi, bắt đầu bằng probe/toolchain
-   có test fixture, rồi triển khai Đợt 1 theo TDD.
+2. Người dùng duyệt implementation plan và chọn cách thực thi.
+3. Bắt đầu bằng toolchain có test fixture và probe read-only, rồi triển khai
+   Đợt 1 theo TDD.
