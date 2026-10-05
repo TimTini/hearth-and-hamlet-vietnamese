@@ -41,6 +41,26 @@ def test_snapshot_json_is_deterministic(tmp_path: Path) -> None:
     ).encode()
 
 
+@pytest.mark.parametrize("name", ["fixture.exe", "fixture.pck"])
+def test_snapshot_rejects_hardlink_without_changing_source(tmp_path: Path, name: str) -> None:
+    source = tmp_path / name
+    source.write_bytes(b"owned synthetic game bytes")
+    destination = tmp_path / "snapshot.json"
+    destination.hardlink_to(source)
+    with pytest.raises(ValueError, match="unsafe_workspace"):
+        write_snapshot(destination, WorkspaceSnapshot("fixture", "A" * 64, "B" * 64, "2026-10-05T00:00:00Z"))
+    assert source.read_bytes() == b"owned synthetic game bytes"
+
+
+def test_snapshot_replaces_inode_instead_of_truncating(tmp_path: Path) -> None:
+    path = tmp_path / "snapshot.json"
+    path.write_bytes(b"old snapshot")
+    original_inode = path.stat().st_ino
+    write_snapshot(path, WorkspaceSnapshot("fixture", "A" * 64, "B" * 64, "2026-10-05T00:00:00Z"))
+    assert path.stat().st_ino != original_inode
+    assert not list(tmp_path.glob("*.tmp"))
+
+
 def test_verify_snapshot_with_spaces(snapshot_files: tuple[Path, Path, Path]) -> None:
     assert verify_snapshot(*snapshot_files, "fixture").ok
 

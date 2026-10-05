@@ -8,7 +8,7 @@ $projectRoot = Split-Path -Parent $PSScriptRoot
 if (-not $RepoRoot) { $RepoRoot = $projectRoot }
 $contextArgs = @(
     'run', '--project', $projectRoot, 'python', '-m', 'hnh_vi.workspace',
-    'prepare', '--repo-root', $RepoRoot, '--game-dir', $GameDir
+    'prepare-extract', '--repo-root', $RepoRoot, '--game-dir', $GameDir
 )
 $contextJson = & uv @contextArgs
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

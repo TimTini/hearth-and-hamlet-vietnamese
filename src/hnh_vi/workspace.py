@@ -3,8 +3,10 @@
 import argparse
 import csv
 import json
+import os
 import re
 import sys
+import tempfile
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -26,12 +28,26 @@ class WorkspaceSnapshot:
     extracted_at_utc: str
 
 
+def _reject_linked_output(path: Path) -> None:
+    if path.is_symlink() or path.is_junction():
+        raise ValueError("unsafe_workspace: linked output entry")
+    if path.is_file() and path.stat().st_nlink != 1:
+        raise ValueError("unsafe_workspace: hard-linked output file")
+
+
 def write_snapshot(path: Path, snapshot: WorkspaceSnapshot) -> None:
-    """Write stable metadata; extracted source text is never part of the JSON."""
-    path.write_text(
-        json.dumps(asdict(snapshot), sort_keys=True, indent=2) + "\n",
-        encoding="utf-8", newline="\n",
-    )
+    """Atomically replace metadata without truncating an existing output inode."""
+    for entry in (path, *path.parents):
+        _reject_linked_output(entry)
+    with tempfile.NamedTemporaryFile(
+        mode="w", encoding="utf-8", newline="\n", dir=path.parent, suffix=".tmp", delete=False,
+    ) as stream:
+        temporary = Path(stream.name)
+        stream.write(json.dumps(asdict(snapshot), sort_keys=True, indent=2) + "\n")
+    try:
+        os.replace(temporary, path)
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
 def verify_snapshot(
@@ -138,12 +154,10 @@ def _verified_context(repo_root: Path, game_dir: Path) -> dict[str, str]:
         raise ValueError("unsafe_build_id")
     workspace = repo_root / "workspace" / spec.build_id
     for path in (repo_root / "workspace", workspace, workspace / "source"):
-        if path.is_symlink() or path.is_junction():
-            raise ValueError("unsafe_workspace: linked output directory")
+        _reject_linked_output(path)
     if workspace.exists():
         for path in workspace.rglob("*"):
-            if path.is_symlink() or path.is_junction():
-                raise ValueError("unsafe_workspace: linked output entry")
+            _reject_linked_output(path)
     tools = {}
     for tool in load_tool_specs(repo_root / "manifests/tools.json"):
         installed = ensure_tool(tool, repo_root / ".tools", offline=True)
@@ -162,15 +176,18 @@ def _verified_context(repo_root: Path, game_dir: Path) -> dict[str, str]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("prepare", "snapshot", "probe-report"))
+    parser.add_argument("command", choices=("prepare", "prepare-extract", "snapshot", "probe-report"))
     parser.add_argument("--repo-root", type=Path, required=True)
     parser.add_argument("--game-dir", type=Path, required=True)
     args = parser.parse_args()
     try:
         context = _verified_context(args.repo_root, args.game_dir)
         workspace = Path(context["workspace"])
-        if args.command == "prepare":
-            (workspace / "source").mkdir(parents=True, exist_ok=True)
+        if args.command in ("prepare", "prepare-extract"):
+            source = workspace / "source"
+            if args.command == "prepare-extract" and source.exists() and any(source.iterdir()):
+                raise ValueError("workspace_source_not_empty: extraction requires an empty source directory")
+            source.mkdir(parents=True, exist_ok=True)
             print(json.dumps(context))
         elif args.command == "snapshot":
             write_snapshot(workspace / "snapshot.json", WorkspaceSnapshot(

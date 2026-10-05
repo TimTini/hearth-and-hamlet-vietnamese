@@ -101,3 +101,16 @@ bị Git ignore. Không commit nội dung CSV hoặc script được phục hồ
 - EXE/PCK thật vẫn khớp fingerprint đã duyệt sau probe. Không có snapshot thật
   hợp lệ. Dừng pipeline tại đây cho tới khi có cách phục hồi đầy đủ key được
   đánh giá và duyệt; không đổi schema hoặc kiến trúc để vượt gate.
+
+### Task 3 — fix round 1
+
+- Gate output chặn hard link ngoài symlink/junction trước các writer Python,
+  PowerShell và GDRE. Snapshot ghi file tạm rồi atomic replace.
+- Extraction yêu cầu `source/` rỗng và trả `workspace_source_not_empty` khi có
+  dữ liệu; không tái sử dụng CSV cũ hoặc tự xóa output. Probe vẫn chạy chỉ đọc.
+- Regression fixture: hard link tới cả EXE/PCK ở 10 output writer, snapshot atomic,
+  và PCK chỉ chứa TSV với CSV cũ trong workspace. Tất cả đã RED → GREEN.
+- Kiểm chứng mới: focused 22 passed, integration 3 passed/19 deselected, full
+  71 passed; Ruff và diff check sạch.
+- Probe thật sau sửa vẫn trả exit 2, locale dynamic, 27/1.849 key không phục hồi,
+  hash CSV/script/EXE/PCK không đổi. Task 3 tiếp tục BLOCKED; không bắt đầu Task 4.
