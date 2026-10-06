@@ -44,7 +44,7 @@ def codes(report) -> list[str]:
     return [issue.code for issue in report.errors]
 
 
-def test_loaders_read_safe_synthetic_fixtures_and_empty_scaffolds() -> None:
+def test_loaders_read_safe_fixtures_and_the_committed_skeleton() -> None:
     assert load_translation_csv(FIXTURES / "translations.vi.csv") == (
         TranslationRow("synthetic_ui", "A" * 64, "Nút tổng hợp"),
     )
@@ -54,8 +54,25 @@ def test_loaders_read_safe_synthetic_fixtures_and_empty_scaffolds() -> None:
     assert load_glossary_csv(FIXTURES / "glossary.csv") == (
         GlossaryTerm("synthetic timber", "gỗ tổng hợp", "", "Thuật ngữ tổng hợp"),
     )
-    assert load_translation_csv(ROOT / "localization/translations.vi.csv") == ()
-    assert load_status_csv(ROOT / "localization/status.csv") == ()
+    completeness = load_source_completeness(ROOT / "localization/source-completeness.json")
+    translations = load_translation_csv(ROOT / "localization/translations.vi.csv")
+    statuses = load_status_csv(ROOT / "localization/status.csv")
+    assert len(translations) == len(statuses) == completeness.unique_recovered_keys
+    assert tuple(row.key for row in translations) == tuple(row.key for row in statuses)
+    assert all(
+        len(row.source_sha256) == 64 and all(char in "0123456789ABCDEF" for char in row.source_sha256)
+        and row.translation_vi == ""
+        for row in translations
+    )
+    assert all(row.status == "draft" and row.note == "" for row in statuses)
+    assert not any(row.key.startswith("<!MissingKey") for row in translations + statuses)
+    source_path = ROOT / "workspace" / completeness.build_id / "probe/source/localisation/translations.csv"
+    if source_path.is_file():
+        source = audit_source_csv(source_path, completeness)
+        assert source.ok
+        assert tuple((row.key, row.source_sha256) for row in source.rows) == tuple(
+            (row.key, row.source_sha256) for row in translations
+        )
     assert load_glossary_csv(ROOT / "localization/glossary.csv") == ()
 
 

@@ -5,6 +5,9 @@ description = "Local Vietnamese localization tools for Hearth and Hamlet"
 requires-python = ">=3.12"
 dependencies = []
 
+[project.scripts]
+hnh-vi = "hnh_vi.cli:main"
+
 [build-system]
 requires = ["setuptools>=75"]
 build-backend = "setuptools.build_meta"

@@ -19,6 +19,31 @@ uv run pytest
 uv run ruff check src tests/python
 ```
 
+## CLI Việt hóa
+
+`hnh-vi` xuất JSON UTF-8 ổn định. Bốn lệnh là:
+
+```powershell
+uv run hnh-vi verify-game --game-dir "<thư mục game>"
+uv run hnh-vi skeleton
+uv run hnh-vi validate
+uv run hnh-vi coverage
+```
+
+`verify-game` chỉ đọc và đối chiếu EXE/PCK với `manifests/game-builds.json`; có
+thể thêm `--appmanifest <file .acf>` để kiểm tra Steam build ID. Ba lệnh dataset
+đọc CSV nguồn đã phục hồi trong `workspace/<build-id>/` và bắt buộc đối chiếu
+`localization/source-completeness.json`; khi dùng đường dẫn khác, truyền
+`--source-csv <file>` và `--completeness <file>`. `skeleton` thêm key đã xác minh
+vào `localization/translations.vi.csv` và `localization/status.csv`, giữ nguyên
+bản dịch/trạng thái/ghi chú đang có, và không ghi cột tiếng Anh hay marker chưa
+phục hồi. `validate` nhận tùy chọn `--required-keys <file>` (mỗi key một dòng);
+`coverage` nhận `--selected-keys <file>` theo cùng định dạng.
+
+Mã thoát: `0` thành công, `2` đầu vào không hợp lệ, `3` build hoặc completeness
+không được hỗ trợ/không khớp, `4` lỗi contract bản dịch, `5` lỗi ghi skeleton
+hoặc kiểm tra build.
+
 Task 1 có API Python xác minh build chỉ đọc tại `src/hnh_vi/builds.py`:
 `load_build_specs`, `sha256_file` và `verify_game_dir`. Manifest
 `manifests/game-builds.json` hỗ trợ EXE 1.1.0.0, Steam build `25600292`;
@@ -32,8 +57,9 @@ khớp. Không truyền file này thì chỉ xác minh fingerprint EXE/PCK.
 Hàm không ghi file hoặc in dữ liệu; lỗi đọc file/JSON được báo cho caller.
 Tên EXE/PCK trong manifest phải là tên file, không chứa đường dẫn.
 
-Kiểm thử chỉ dùng file tổng hợp trong thư mục tạm, không truy cập game thật.
-CLI và script cài/gỡ chưa được triển khai.
+Kiểm thử CLI dùng game giả lập trong thư mục tạm; contract skeleton có thể đối
+chiếu CSV phục hồi trong workspace bị ignore. Không test nào mở hoặc chạy game
+đã cài. Script cài/gỡ chưa được triển khai.
 
 ## Extraction và probe chỉ đọc
 
@@ -46,5 +72,5 @@ replace, không truncate output cũ.
 
 Output chỉ nằm dưới `workspace/<build-id>/` bị ignore. Extraction từ chối source
 không rỗng với `workspace_source_not_empty`; không tự xóa hoặc dùng lại CSV cũ.
-Build thật hiện chưa có snapshot hợp lệ: probe báo `translation_recovery_incomplete`
-với 27/1.849 key chưa phục hồi. Xem checkpoint Task 3 trước khi tiếp tục pipeline.
+Build thật hiện chưa phục hồi đủ: còn 27/1.849 key chưa xác minh. Preview, nếu
+được tạo ở các bước sau, phải giữ fallback tiếng Anh và báo rõ giới hạn nguồn.
