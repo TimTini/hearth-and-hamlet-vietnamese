@@ -6,6 +6,11 @@ Ngày xác minh: 2026-10-06, nhánh `codex/phase-1-localization`, HEAD kiểm ch
 Game: Hearth and Hamlet EXE 1.1.0.0, Steam build `25600292`.
 GameDir: `<GameDir>`.
 
+> **Cập nhật trạng thái:** phần 1 ghi lại thời điểm dry-run (game còn nguyên bản).
+> Sau đó người dùng đã ủy quyền `-Apply`; kết quả cài thật nằm ở mục "Apply
+> checkpoint" trong `work/hearth-and-hamlet-vietnamese-progress.md`. Phần 3 (smoke
+> trong game) vẫn chưa chạy.
+
 ## 1. Bằng chứng đã có (không ghi vào game)
 
 | Hạng mục | Kết quả |
