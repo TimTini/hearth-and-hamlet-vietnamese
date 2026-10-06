@@ -12,9 +12,15 @@ from hnh_vi.dataset import CanonicalSource
 
 STATUSES = frozenset({"draft", "reviewed", "in_game", "blocked"})
 PRINTF = re.compile(r"%%|%(?:\d+\$)?[-+ #0]*(?:\d+|\*)?(?:\.(?:\d+|\*))?[hlL]*[diouxXeEfFgGcs]")
-BRACED = re.compile(r"(?<!\{)\{[A-Za-z_][A-Za-z0-9_]*\}(?!\})")
+BRACED = re.compile(r"(?<!\{)\{(?:[A-Za-z_][A-Za-z0-9_]*|[0-9]+)\}(?!\})")
 TAG = re.compile(r"\[(/?)([A-Za-z_][A-Za-z0-9_]*)([^\[\]]*)\]")
 SINGLE_TAGS = frozenset({"br", "hr", "lb", "rb"})
+SUPPORTED_TAGS = SINGLE_TAGS | frozenset({
+    "b", "i", "u", "s", "code", "p", "center", "left", "right", "fill", "indent",
+    "url", "hint", "img", "font", "font_size", "dropcap", "opentype_features", "lang",
+    "color", "bgcolor", "fgcolor", "outline_size", "outline_color", "table", "cell",
+    "ul", "ol", "wave", "tornado", "shake", "fade", "rainbow", "pulse",
+})
 
 
 @dataclass(frozen=True)
@@ -92,6 +98,8 @@ def _bbcode(text: str) -> tuple[str, ...] | None:
     tokens = []
     for match in TAG.finditer(text):
         closing, name, attributes = match.groups()
+        if name not in SUPPORTED_TAGS:
+            continue
         tokens.append(match.group())
         if closing:
             if attributes or not stack or stack.pop() != name:
@@ -183,12 +191,12 @@ def validate_dataset(
         elif row.source_sha256.upper() != original.source_sha256.upper():
             issue("source_hash_drift", key)
         text = row.translation_vi
+        if any(unicodedata.category(char) in {"Cs", "Cc"} and char not in "\n\r\t" for char in text):
+            issue("invalid_unicode", key)
         if not text.strip():
             if key in required:
                 issue("empty_required_translation", key)
             continue
-        if any(unicodedata.category(char) in {"Cs", "Cc"} and char not in "\n\r\t" for char in text):
-            issue("invalid_unicode", key)
         if not unicodedata.is_normalized("NFC", text):
             issue("non_nfc_translation", key, "warning")
         if _placeholders(original.english) != _placeholders(text):

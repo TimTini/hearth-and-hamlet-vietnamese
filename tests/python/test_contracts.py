@@ -275,3 +275,31 @@ def test_hash_case_is_not_source_drift() -> None:
     assert validate_dataset(source, (replace(translations[0],
                                              source_sha256=translations[0].source_sha256.lower()),),
                             statuses, ()).ok
+
+
+@pytest.mark.parametrize(("english", "translation", "valid"), [
+    ("Synthetic {0} {1}", "Tổng hợp {0} {1}", True),
+    ("Synthetic {0} {1}", "Tổng hợp {1} {0}", True),
+    ("Synthetic {0} {1}", "Tổng hợp {0}", False),
+    ("Synthetic {0}", "Tổng hợp {1}", False),
+    ("Synthetic {0} {0}", "Tổng hợp {0}", False),
+    ("Synthetic {0}", "Tổng hợp {0} {0}", False),
+])
+def test_numeric_format_placeholder_parity(english, translation, valid) -> None:
+    report = validate_dataset(*one_row(english, translation), ())
+    assert report.ok == valid
+    assert ("placeholder_mismatch" in codes(report)) == (not valid)
+
+
+@pytest.mark.parametrize(("english", "translation"), [
+    ("Synthetic [Space] action", "Thao tác tổng hợp [Space]"),
+    ("[b]Synthetic [Space] action[/b]", "[b]Thao tác tổng hợp [Space][/b]"),
+])
+def test_literal_key_label_is_not_bbcode(english, translation) -> None:
+    assert validate_dataset(*one_row(english, translation), ()).ok
+
+
+@pytest.mark.parametrize("control", ["\x0b", "\x0c", "\x1c", "\x1d", "\x1e", "\x1f", "\x85"])
+def test_control_only_translation_cannot_be_accepted_as_nonrequired_gap(control) -> None:
+    report = validate_dataset(*one_row(translation=control), (), required_keys=frozenset())
+    assert codes(report) == ["invalid_unicode"]
