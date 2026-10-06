@@ -49,7 +49,7 @@
 - Create: `installer/tests/HearthAndHamlet.Vietnamese.Setup.Tests/InstallerOptionsTests.cs`
 
 **Interfaces:**
-- Produces: `GameLocator.FindCandidates(string executableDirectory, string currentDirectory)`, `InstallEngine.InstallAsync(...)`, `InstallEngine.RestoreAsync(...)`, `InstallerOptions.Parse(string[] args)`, and CLI exit codes usable by packaging/E2E tests.
+- Produces: `IEnumerable<string> GameLocator.FindCandidates(string executableDirectory, string currentDirectory, IEnumerable<string> steamRoots)`, `Task<InstallResult> InstallEngine.InstallAsync(GamePaths game, string backupRoot, IPayloadPatcher patcher, CancellationToken cancellationToken)`, `Task<InstallResult> InstallEngine.RestoreAsync(GamePaths game, string backupRoot, CancellationToken cancellationToken)`, `InstallerOptions.Parse(string[] args)`, and CLI exit codes usable by packaging/E2E tests.
 
 - [ ] **Step 1: Write failing tests for options and discovery**
 
@@ -130,7 +130,7 @@
 
 - [ ] **Step 7: Run full local regression checks**
 
-  Run: `dotnet test ... --configuration Release`, `uv run pytest -q`, `uv run ruff check src tests/python`, `uv run hnh-vi validate --required-keys .\localization\phase1.keys`, `uv run hnh-vi coverage --selected-keys .\localization\phase1.keys`, and `git diff --check`.
+  Run: `dotnet test installer/tests/HearthAndHamlet.Vietnamese.Setup.Tests/HearthAndHamlet.Vietnamese.Setup.Tests.csproj --configuration Release`, `uv run pytest -q`, `uv run ruff check src tests/python`, `uv run hnh-vi validate --required-keys .\localization\phase1.keys`, `uv run hnh-vi coverage --selected-keys .\localization\phase1.keys`, and `git diff --check`.
 
 - [ ] **Step 8: Commit the task**
 
