@@ -80,5 +80,11 @@ HUD chính (BI_*), menu xây/nâng cấp, ghi chú trận/giao thương/nghiên 
 quân sự, giao thương/cửa hàng cơ bản, nhãn hạnh phúc/nhân công và một số tên
 công trình sớm — đủ để người chơi mới theo vòng chơi cốt lõi.
 
-Công trình chi tiết, nâng cấp từng cấp, chính sách đầy đủ, nhiệm vụ dài và cốt
-truyện thuộc các đợt sau; không dịch chúng trong đợt này.
+Đợt 1.6 (cùng `phase1.keys`) thêm gần như toàn bộ tên/mô tả/phần thưởng công
+trình (`BU_*_NAME` / `_DES` / `_REWARD`), sổ nâng cấp (`UPG_*`) và chính sách
+(`POLICY_*`). Nhiệm vụ dài (`QUEST_*`), vật phẩm (`ITEM_*`), thành tựu và cải
+tiến chi tiết từng ngành vẫn để các đợt sau.
+
+Khi tiếng Anh mơ hồ, đối chiếu cùng key ở cột `de` / `zh_CN` / `ko` (và ngôn ngữ
+khác nếu cần) chỉ để hiểu nghĩa; câu tiếng Việt vẫn dịch theo ý EN, không dịch
+máy nguyên văn từ KO/ZH. Không đủ chắc thì để `blocked` kèm ghi chú.

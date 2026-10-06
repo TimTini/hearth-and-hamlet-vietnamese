@@ -290,3 +290,27 @@ chưa phục hồi fallback tiếng Anh.
   Game PCK now `964A7183…5056`; backup under
   `%LOCALAPPDATA%\HearthAndHamletVietnamese\backups\25600292\20261006T052741836427Z`.
 - Still need in-game smoke: Tiếng Việt label, Vietnamese menus/tutorial, fonts/layout.
+
+## Phase 1.6 recheck + building/policy expand — 2026-10-06
+
+- Rechecked prior 263 reviewed keys; fixed ~12–17 awkward/inconsistent strings
+  (tutorial word order, blueprint capitalization, “buff” → hiệu ứng tăng cường,
+  caravan notification unblocked via ZH/KO/DE cross-check that `{type}` is size).
+- Expanded playable coverage: all `BU_*_NAME` / `_DES` / `_REWARD` (except two
+  placeholder rewards), all `UPG_*`, all `POLICY_*`.
+- Status before → after: reviewed 263 → **741**; blocked 7 → **8**; draft 1541 → **1062**.
+  `phase1.keys` 263 → **741**. Selected ready ratio 1.0.
+- New blocked: `BU_CLIFF_1_REWARD`, `BU_MILITARY_CAMP_1_REWARD` (EN “To be defined”).
+  Still blocked: `HAPPINESS_A`, five `DIF_*` (screen context unclear; `DIF_MODERATE`
+  ZH/KO read as size not difficulty).
+- Cross-check examples: `Multiplier A` kept as “Lao động lành nghề” (EN Skilled
+  Labour); caravan `{type}` = Small/Moderate/Large; wall rewards follow EN first-strike
+  wording (ignore ZH extra +10% where EN omits it).
+- Validate: 0 errors, 8 duplicate warnings, 0 glossary mismatches.
+- Pytest: 417 passed, 2 skipped.
+- Rebuild preview SHA-256 `FE8D2DEA45DDF1C6633BBEE4768C46984AC48BB0E0FFB1C48D06F093D7B497BE`,
+  translated_keys=741. Uninstalled prior preview, dry-run + `-Apply` to GameDir;
+  game PCK hash matches artifact. Backup:
+  `%LOCALAPPDATA%\HearthAndHamletVietnamese\backups\25600292\20261006T054216649713Z`.
+- Remaining for play: `QUEST_*` narrative, `ITEM_*`, `ACH_*`, industry improvement
+  keys (`*_IMPROVEMENT_*`), 27 unrecovered keys (EN fallback).
