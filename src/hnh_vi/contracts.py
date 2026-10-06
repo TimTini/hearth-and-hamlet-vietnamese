@@ -14,7 +14,10 @@ STATUSES = frozenset({"draft", "reviewed", "in_game", "blocked"})
 PRINTF = re.compile(r"%%|%(?:\d+\$)?[-+ #0]*(?:\d+|\*)?(?:\.(?:\d+|\*))?[hlL]*[diouxXeEfFgGcs]")
 BRACED = re.compile(r"(?<!\{)\{(?:[A-Za-z_][A-Za-z0-9_]*|[0-9]+)\}(?!\})")
 TAG = re.compile(r"\[(/?)([A-Za-z_][A-Za-z0-9_]*)([^\[\]]*)\]")
-SINGLE_TAGS = frozenset({"br", "hr", "lb", "rb"})
+SINGLE_TAGS = frozenset({
+    "br", "hr", "lb", "rb", "char", "lrm", "rlm", "lre", "rle", "lro", "rlo", "pdf",
+    "alm", "lri", "rli", "fsi", "pdi", "zwj", "zwnj", "wj", "shy",
+})
 SUPPORTED_TAGS = SINGLE_TAGS | frozenset({
     "b", "i", "u", "s", "code", "p", "center", "left", "right", "fill", "indent",
     "url", "hint", "img", "font", "font_size", "dropcap", "opentype_features", "lang",

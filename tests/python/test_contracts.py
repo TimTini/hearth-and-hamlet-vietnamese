@@ -303,3 +303,21 @@ def test_literal_key_label_is_not_bbcode(english, translation) -> None:
 def test_control_only_translation_cannot_be_accepted_as_nonrequired_gap(control) -> None:
     report = validate_dataset(*one_row(translation=control), (), required_keys=frozenset())
     assert codes(report) == ["invalid_unicode"]
+
+
+@pytest.mark.parametrize("tag", [
+    "char=0041", "lrm", "rlm", "lre", "rle", "lro", "rlo", "pdf", "alm", "lri", "rli",
+    "fsi", "pdi", "zwj", "zwnj", "wj", "shy",
+])
+@pytest.mark.parametrize("mutation", ["preserve", "change", "omit"])
+def test_godot_singleton_tag_parity(tag, mutation) -> None:
+    english = f"[b]Synthetic [{tag}] [Space][/b]"
+    if mutation == "preserve":
+        translation = f"[b]Tổng hợp [{tag}] [Space][/b]"
+    elif mutation == "change":
+        translation = "[b]Tổng hợp [char=0042] [Space][/b]"
+    else:
+        translation = "[b]Tổng hợp [Space][/b]"
+    report = validate_dataset(*one_row(english, translation), ())
+    assert report.ok == (mutation == "preserve")
+    assert ("bbcode_mismatch" in codes(report)) == (mutation != "preserve")
