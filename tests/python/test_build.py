@@ -549,7 +549,6 @@ def test_inject_vietnamese_native_name_adds_tieng_viet() -> None:
     patched = inject_vietnamese_native_name(original)
     assert '"vi": "Tiếng Việt"' in patched
     assert '"ko": "한국어"' in patched
-    assert 'language_dropdown' not in patched or True
     assert patched.index('"vi"') > patched.index('"ko"')
 
 
