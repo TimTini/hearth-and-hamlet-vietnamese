@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build, validate and translate a safe Phase 1 Vietnamese preview from the 1,810 known localization keys while reporting 27 unrecovered source rows and retaining English fallback.
+**Goal:** Build, validate and translate a safe Phase 1 Vietnamese preview from the 1,811 known localization keys while reporting 27 unrecovered source rows and retaining English fallback.
 
 **Architecture:** The ignored recovered CSV remains the source of truth, while a committed completeness manifest pins its hashes and counts. Dataset/contract/coverage code canonicalizes same-source duplicates, excludes missing-key markers, and permits preview builds only for fully reviewed phase keys; build and install remain deterministic, fail-closed and dry-run by default.
 
@@ -13,7 +13,8 @@
 ## Global Constraints
 
 - Only Steam build `25600292` is supported: EXE SHA-256 `7D37BBF3BD6AB823F2659CE410FE792EFF2A51D1280FC211E3175C2D412F9A2A`, PCK SHA-256 `7D5A2113B5D63B40605413A70B707DC7F56AFC7DE02BCE34760E227BFE6E0201`.
-- Completeness is pinned to 1,849 total rows, 1,822 recovered rows, 1,810 unique recovered keys, nine duplicate-key groups, 12 duplicate extra rows and 27 unrecovered rows.
+- Completeness is pinned to 1,849 total rows, 1,822 recovered rows, 1,811 unique recovered keys, eight duplicate-key groups, 11 duplicate extra rows and 27 unrecovered rows.
+- Ruling 2026-10-06: preserve exact, case-sensitive key identity without stripping, normalization or casefolding. The previous 1,810/9/12 audit used PowerShell Group-Object's case-insensitive grouping; source fingerprints are unchanged.
 - Never commit the recovered English CSV, raw missing-key markers, recovered game scripts, binaries, tools, logs, saves or user configuration.
 - `translations.vi.csv` has exactly `key,source_sha256,translation_vi`; translation prose is natural, easy to play and NFC-normalized only in generated build workspaces.
 - A same-key/same-English-hash duplicate is canonicalized with a warning; a same-key/different-English-hash duplicate blocks validation.
@@ -52,7 +53,7 @@
 
 - [ ] **Step 1: Write failing completeness and dataset tests**
 
-Test exact manifest values, UTF-8 BOM/quoted newline, all missing-key marker positions, a marker text change with unchanged count, nine same-English duplicate groups, same-key/different-English conflict, stable first-occurrence order, source hash drift, count drift, missing columns and paths containing spaces/Unicode. Assert the fixture audit yields its expected canonical key count and that issue metadata contains no complete source sentence.
+Test exact manifest values, UTF-8 BOM/quoted newline, all missing-key marker positions, a marker text change with unchanged count, nine synthetic same-English duplicate groups, same-key/different-English conflict, distinct case/whitespace variant keys with the same English hash, stable first-occurrence order, source hash drift, count drift, missing columns and paths containing spaces/Unicode. Assert the fixture audit yields its expected canonical key count and that issue metadata contains no complete source sentence.
 
 - [ ] **Step 2: Run focused tests and verify RED**
 
@@ -68,7 +69,7 @@ Use `csv`, `dataclasses`, `hashlib`, `json` and `pathlib`. Missing-key rows are 
 
 Run the audit against `workspace/25600292/probe/source/localisation/translations.csv` and `localization/source-completeness.json`.
 
-Expected: 1,849 total rows, 1,822 recovered rows, 1,810 canonical keys, nine duplicate groups, 12 duplicate extra rows, 27 unrecovered rows, no blocking issue; no game write and no English source in Git diff.
+Expected: 1,849 total rows, 1,822 recovered rows, 1,811 canonical keys, eight duplicate groups, 11 duplicate extra rows, 27 unrecovered rows, no blocking issue; no game write and no English source in Git diff.
 
 - [ ] **Step 5: Run GREEN, Ruff and commit**
 

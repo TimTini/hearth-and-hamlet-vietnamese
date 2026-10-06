@@ -140,8 +140,9 @@ tách thành hai spec để có kế hoạch và review độc lập:
 - `docs/superpowers/specs/2026-10-06-runtime-key-recovery-design.md`
 
 Audit read-only cho snapshot hiện tại: `1.849` row tổng, `27` row
-`MissingKey`, `1.822` row có key, `1.810` unique key; chín nhóm duplicate tạo
-12 row dư và đều có cùng English source trong từng nhóm. Chưa sửa code Task 4
+`MissingKey`, `1.822` row có key, `1.811` unique key; tám nhóm duplicate tạo
+11 row dư và đều có cùng English source trong từng nhóm. Count này đã sửa theo
+ruling Task 1 bên dưới; audit trước gộp key khác case. Chưa sửa code Task 4
 hoặc tạo diagnostic artifact tại checkpoint này. Sau đó người dùng đã duyệt
 hai spec, giao agent tự quyết chi tiết kế hoạch và yêu cầu bắt đầu dịch bằng
 phương thức subagent-driven.
@@ -155,3 +156,32 @@ Hai implementation plan mới đã được viết theo thứ tự agent tự ch
 
 Tasks 4–9 của plan ngày 2026-10-05 được đánh dấu superseded để không bị chạy
 nhầm. Chưa có `-Apply` hoặc game launch nào được thực hiện.
+
+## Partial preview — Task 1, 2026-10-06
+
+- Phạm vi: completeness manifest và canonical dataset; không build/install/launch.
+- Base: `3078526efb0d186cd7893553bf5bdcef13286482`.
+- RED: `uv run pytest tests/python/test_completeness.py tests/python/test_dataset.py -q`
+  → exit 1, hai collection error vì `hnh_vi.completeness` chưa tồn tại.
+- Test synthetic cho schema/hash/count, marker GDRE anchored, prefix sai grammar,
+  key thường có chữ MissingKey, duplicate và thứ tự; không copy câu game.
+- Implementation đang kiểm chứng; source thật chỉ đọc để audit count/hash.
+- Focused GREEN: 45 passed; full `uv run pytest -q`: 121 passed, không skip;
+  `uv run ruff check src tests/python`: exit 0.
+- Real audit: hash CSV giữ nguyên, 1.849 total / 1.822 recovered / 27 unrecovered,
+  nhưng exact-key identity cho 1.811 unique / 8 duplicate groups / 11 extra rows.
+  Trước ruling, manifest giữ values cũ (1.810 / 9 / 12) và count gate đã chặn đúng.
+- Root cause metadata-only: hai row 1353/1771 có key khác case, length đều 9,
+  cùng English hash; Group-Object mặc định case-insensitive giải thích audit cũ.
+  Không strip/casefold key. Controller ruling cho phép sửa approved count thành
+  1.811 unique / 8 groups / 11 extras trong manifest, spec và plan.
+- RED ruling: focused test → exit 1, 1 failed / 47 passed do manifest còn count cũ.
+  Regression same-English/case-variant key đã chứng minh RED bằng temporary
+  casefold mutation tại grouping (1 failed / 2 passed / 21 deselected); mutation
+  đã gỡ.
+- Verification sau ruling: focused 48 passed, full 124 passed (không skip), Ruff
+  exit 0. Real audit exit 0: 1.811 canonical keys, tám duplicate warning,
+  không blocking issue; hash CSV trước/sau vẫn `D7ADF32E…003F7E`.
+- Source-leak check: không real marker hoặc full English sentence trong các file
+  Task 1; writer/gate Task 3 không đổi. Không ghi game, tạo snapshot thật hoặc
+  build artifact. Tiếp theo controller review Task 1 trước Task 2.

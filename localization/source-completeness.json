@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "build_id": "25600292",
+  "pck_sha256": "7D5A2113B5D63B40605413A70B707DC7F56AFC7DE02BCE34760E227BFE6E0201",
+  "recovered_csv_sha256": "D7ADF32E2453BEAE6D716319D703C1BC5715A31143C7DB91D299FA7619003F7E",
+  "total_rows": 1849,
+  "recovered_rows": 1822,
+  "unique_recovered_keys": 1811,
+  "duplicate_key_groups": 8,
+  "duplicate_extra_rows": 11,
+  "unrecovered_rows": 27,
+  "fallback_locale": "en",
+  "policy": "partial_with_english_fallback",
+  "source_complete": false
+}

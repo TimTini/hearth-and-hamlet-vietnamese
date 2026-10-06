@@ -16,9 +16,14 @@ Thiết kế liên quan: `docs/superpowers/specs/2026-10-06-runtime-key-recovery
 Steam build `25600292` chứa `1.849` dòng translation nhưng không chứa CSV
 nguồn. GDRE 2.7.0 phục hồi đủ schema và số dòng, nhưng `27` dòng vẫn mang
 marker `MissingKey`; `1.822` dòng còn lại có định danh đã phục hồi. Số dòng
-không được coi là số unique key. Audit read-only xác nhận có `1.810` unique
-key đã biết: chín nhóm key trùng tạo thêm 12 dòng. Cả chín nhóm có cùng nguồn
+không được coi là số unique key. Audit read-only xác nhận có `1.811` unique
+key đã biết: tám nhóm key trùng tạo thêm 11 dòng. Cả tám nhóm có cùng nguồn
 English cho một key; khác biệt chỉ nằm ở locale khác.
+
+Ruling 2026-10-06: key giữ nguyên identity chính xác, phân biệt hoa/thường và
+khoảng trắng; không strip, normalize hoặc casefold. Count cũ `1.810 / 9 / 12`
+do PowerShell Group-Object mặc định gộp key khác hoa/thường, đã được sửa sau
+audit theo identity chính xác. CSV/PCK fingerprint không thay đổi.
 
 Mục tiêu của thiết kế này là cho phép Việt hóa và phát hành bản thử theo từng
 đợt mà không phải chờ phục hồi đủ 27 key, đồng thời không che giấu giới hạn
@@ -50,9 +55,9 @@ Git chỉ chứa `localization/source-completeness.json` với schema xác đị
 - `recovered_csv_sha256`: hash CSV phục hồi local.
 - `total_rows`: `1849`.
 - `recovered_rows`: `1822`.
-- `unique_recovered_keys`: `1810`.
-- `duplicate_key_groups`: `9`.
-- `duplicate_extra_rows`: `12`.
+- `unique_recovered_keys`: `1811`.
+- `duplicate_key_groups`: `8`.
+- `duplicate_extra_rows`: `11`.
 - `unrecovered_rows`: `27`.
 - `fallback_locale`: `"en"`.
 - `policy`: `"partial_with_english_fallback"`.
