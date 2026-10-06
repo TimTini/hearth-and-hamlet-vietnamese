@@ -48,3 +48,6 @@ Thumbs.db
 .cursor/
 .codex/
 .agent-stores/
+
+# Private local snapshots; keep out of GitHub
+/local-private-20261006/
