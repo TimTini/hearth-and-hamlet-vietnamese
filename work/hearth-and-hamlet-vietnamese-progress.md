@@ -142,4 +142,6 @@ tách thành hai spec để có kế hoạch và review độc lập:
 Audit read-only cho snapshot hiện tại: `1.849` row tổng, `27` row
 `MissingKey`, `1.822` row có key, `1.810` unique key; chín nhóm duplicate tạo
 12 row dư và đều có cùng English source trong từng nhóm. Chưa sửa code Task 4
-hoặc tạo diagnostic artifact; hai spec đang chờ người dùng duyệt bản đã lưu.
+hoặc tạo diagnostic artifact tại checkpoint này. Sau đó người dùng đã duyệt
+hai spec, giao agent tự quyết chi tiết kế hoạch và yêu cầu bắt đầu dịch bằng
+phương thức subagent-driven.

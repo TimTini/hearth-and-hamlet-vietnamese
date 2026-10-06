@@ -2,7 +2,8 @@
 
 Ngày: 2026-10-06
 
-Trạng thái: Chờ người dùng duyệt bản spec đã lưu
+Trạng thái: Đã được người dùng duyệt ngày 2026-10-06; người dùng giao agent tự
+quyết chi tiết kế hoạch và yêu cầu bắt đầu dịch.
 
 Repo: `<RepoRoot>`
 
