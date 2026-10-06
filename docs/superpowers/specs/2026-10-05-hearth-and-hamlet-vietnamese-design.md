@@ -6,6 +6,13 @@ Trạng thái: Đã được người dùng duyệt ngày 2026-10-05
 
 Repo: `<RepoRoot>`
 
+Phần thiết kế này được bổ sung bởi hai quyết định đã duyệt ngày 2026-10-06:
+
+- `2026-10-06-partial-source-release-design.md`: cho phép phát hành sớm có
+  fallback tiếng Anh khi snapshot nguồn chưa phục hồi đủ.
+- `2026-10-06-runtime-key-recovery-design.md`: phục hồi các key còn thiếu bằng
+  offline hints trước, rồi mới dùng diagnostic runtime tạm thời nếu cần.
+
 ## 1. Mục tiêu
 
 Tạo bộ công cụ có thể lặp lại và một bản dịch tiếng Việt tự nhiên, dễ chơi

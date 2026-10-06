@@ -129,3 +129,17 @@ bị Git ignore. Không commit nội dung CSV hoặc script được phục hồ
   khởi động tùy ý khi verification chậm.
 - Probe F: → H: vẫn trả exit 2, dynamic locale, thiếu 27/1.849 key; các hash nguồn
   và CSV/script đã nêu không đổi. Task 3 vẫn BLOCKED; Task 4 chưa bắt đầu.
+
+## Quyết định thiết kế bổ sung — 2026-10-06
+
+Người dùng chọn đồng thời hai hướng: tiếp tục Việt hóa phần nguồn đã phục hồi
+với fallback tiếng Anh, và mở luồng phục hồi 27 key còn thiếu. Thiết kế được
+tách thành hai spec để có kế hoạch và review độc lập:
+
+- `docs/superpowers/specs/2026-10-06-partial-source-release-design.md`
+- `docs/superpowers/specs/2026-10-06-runtime-key-recovery-design.md`
+
+Audit read-only cho snapshot hiện tại: `1.849` row tổng, `27` row
+`MissingKey`, `1.822` row có key, `1.810` unique key; chín nhóm duplicate tạo
+12 row dư và đều có cùng English source trong từng nhóm. Chưa sửa code Task 4
+hoặc tạo diagnostic artifact; hai spec đang chờ người dùng duyệt bản đã lưu.
