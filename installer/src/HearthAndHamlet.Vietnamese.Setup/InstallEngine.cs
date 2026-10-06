@@ -8,15 +8,25 @@ public interface IInstallFileMover
     void Move(string source, string destination);
 }
 
+public interface IInstallFileHasher
+{
+    Task<string> HashAsync(string path, CancellationToken cancellationToken);
+}
+
 public sealed class InstallEngine
 {
     private readonly InstallFingerprints _fingerprints;
     private readonly IInstallFileMover _fileMover;
+    private readonly IInstallFileHasher _fileHasher;
 
-    public InstallEngine(InstallFingerprints? fingerprints = null, IInstallFileMover? fileMover = null)
+    public InstallEngine(
+        InstallFingerprints? fingerprints = null,
+        IInstallFileMover? fileMover = null,
+        IInstallFileHasher? fileHasher = null)
     {
         _fingerprints = fingerprints ?? ReleaseConstants.Fingerprints;
         _fileMover = fileMover ?? new PhysicalInstallFileMover();
+        _fileHasher = fileHasher ?? new StreamingInstallFileHasher();
     }
 
     public async Task<InstallResult> InstallAsync(
@@ -39,11 +49,11 @@ public sealed class InstallEngine
         {
             cancellationToken.ThrowIfCancellationRequested();
             exeLock = OpenExecutableLock(game.Executable);
-            var exeHash = await HashFileAsync(game.Executable, cancellationToken);
+            var exeHash = await _fileHasher.HashAsync(game.Executable, cancellationToken);
             if (!HashEquals(exeHash, _fingerprints.ExecutableSha256))
                 return Failure("unsupported_exe", "EXE game không đúng fingerprint được hỗ trợ.");
 
-            var currentHash = await HashFileAsync(game.Pck, cancellationToken);
+            var currentHash = await _fileHasher.HashAsync(game.Pck, cancellationToken);
             if (HashEquals(currentHash, _fingerprints.TranslatedPckSha256))
                 return Failure("already_installed", "Bản Việt hóa đã được cài.");
             if (!HashEquals(currentHash, _fingerprints.OriginalPckSha256))
@@ -72,14 +82,26 @@ public sealed class InstallEngine
 
             if (!File.Exists(stagedPath))
                 return Failure("patch_failed", "Patcher không tạo ra file PCK.");
-            var stagedHash = await HashFileAsync(stagedPath, cancellationToken);
+            var stagedHash = await _fileHasher.HashAsync(stagedPath, cancellationToken);
             if (!HashEquals(stagedHash, _fingerprints.TranslatedPckSha256))
                 return Failure("verification_failed", "Hash PCK bản Việt hóa không khớp.");
 
             rollbackPath = CreateTemporaryPath(game.GameDirectory, ".hnh-vi-rollback-");
             ReplaceWithRollback(game.Pck, stagedPath, rollbackPath);
             stagedPath = null;
-            var installedHash = await HashFileAsync(game.Pck, cancellationToken);
+            string installedHash;
+            try
+            {
+                installedHash = await _fileHasher.HashAsync(game.Pck, cancellationToken);
+            }
+            catch (Exception exception)
+            {
+                recoveryRequired = true;
+                return Failure(
+                    "recovery_required",
+                    $"Không thể xác minh PCK sau khi thay ({exception.Message}). Giữ rollback và backup để phục hồi thủ công: {rollbackPath}",
+                    backupDirectory);
+            }
             if (!HashEquals(installedHash, _fingerprints.TranslatedPckSha256))
             {
                 try
@@ -155,11 +177,11 @@ public sealed class InstallEngine
         {
             cancellationToken.ThrowIfCancellationRequested();
             exeLock = OpenExecutableLock(game.Executable);
-            var exeHash = await HashFileAsync(game.Executable, cancellationToken);
+            var exeHash = await _fileHasher.HashAsync(game.Executable, cancellationToken);
             if (!HashEquals(exeHash, _fingerprints.ExecutableSha256))
                 return Failure("unsupported_exe", "EXE game không đúng fingerprint được hỗ trợ.");
 
-            var currentHash = await HashFileAsync(game.Pck, cancellationToken);
+            var currentHash = await _fileHasher.HashAsync(game.Pck, cancellationToken);
             if (!HashEquals(currentHash, _fingerprints.TranslatedPckSha256))
                 return Failure("unsupported_pck", "PCK hiện tại không phải bản Việt hóa được hỗ trợ.");
             if (IsReadOnly(game.Pck))
@@ -171,14 +193,26 @@ public sealed class InstallEngine
 
             stagedPath = CreateTemporaryPath(game.GameDirectory, ".hnh-vi-restore-");
             File.Copy(backup.PckPath, stagedPath, overwrite: false);
-            var stagedHash = await HashFileAsync(stagedPath, cancellationToken);
+            var stagedHash = await _fileHasher.HashAsync(stagedPath, cancellationToken);
             if (!HashEquals(stagedHash, _fingerprints.OriginalPckSha256))
                 return Failure("backup_invalid", "Hash backup không khớp.");
 
             rollbackPath = CreateTemporaryPath(game.GameDirectory, ".hnh-vi-rollback-");
             ReplaceWithRollback(game.Pck, stagedPath, rollbackPath);
             stagedPath = null;
-            var restoredHash = await HashFileAsync(game.Pck, cancellationToken);
+            string restoredHash;
+            try
+            {
+                restoredHash = await _fileHasher.HashAsync(game.Pck, cancellationToken);
+            }
+            catch (Exception exception)
+            {
+                recoveryRequired = true;
+                return Failure(
+                    "recovery_required",
+                    $"Không thể xác minh PCK sau khi phục hồi ({exception.Message}). Giữ rollback để phục hồi thủ công: {rollbackPath}",
+                    backup.Directory);
+            }
             if (!HashEquals(restoredHash, _fingerprints.OriginalPckSha256))
             {
                 try
@@ -260,7 +294,7 @@ public sealed class InstallEngine
                     !HashEquals(metadata.TranslatedPckSha256, _fingerprints.TranslatedPckSha256) ||
                     !File.Exists(pckPath))
                     continue;
-                var pckHash = await HashFileAsync(pckPath, cancellationToken);
+                var pckHash = await _fileHasher.HashAsync(pckPath, cancellationToken);
                 if (HashEquals(pckHash, _fingerprints.OriginalPckSha256))
                     return new BackupInfo(directory, pckPath);
             }
@@ -306,7 +340,16 @@ public sealed class InstallEngine
 
     private void ReplaceWithRollback(string current, string staged, string rollback)
     {
-        _fileMover.Move(current, rollback);
+        try
+        {
+            _fileMover.Move(current, rollback);
+        }
+        catch (Exception exception)
+        {
+            throw new RecoveryRequiredException(
+                $"Không chắc file gốc đã được chuyển an toàn. Giữ backup và rollback tạm (nếu đã tạo) để phục hồi thủ công: {rollback}",
+                exception);
+        }
         try
         {
             _fileMover.Move(staged, current);
@@ -352,7 +395,7 @@ public sealed class InstallEngine
 
     private bool IsTranslated(string path)
     {
-        try { return HashEquals(HashFileAsync(path, CancellationToken.None).GetAwaiter().GetResult(), _fingerprints.TranslatedPckSha256); }
+        try { return HashEquals(_fileHasher.HashAsync(path, CancellationToken.None).GetAwaiter().GetResult(), _fingerprints.TranslatedPckSha256); }
         catch { return false; }
     }
 
@@ -411,5 +454,11 @@ public sealed class InstallEngine
     private sealed class PhysicalInstallFileMover : IInstallFileMover
     {
         public void Move(string source, string destination) => File.Move(source, destination);
+    }
+
+    private sealed class StreamingInstallFileHasher : IInstallFileHasher
+    {
+        public Task<string> HashAsync(string path, CancellationToken cancellationToken) =>
+            HashFileAsync(path, cancellationToken);
     }
 }

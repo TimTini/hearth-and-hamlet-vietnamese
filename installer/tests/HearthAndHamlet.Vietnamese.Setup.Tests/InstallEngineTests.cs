@@ -118,6 +118,67 @@ public sealed class InstallEngineTests
     }
 
     [Fact]
+    public async Task InstallAsync_preserves_recovery_files_when_post_replace_hash_fails()
+    {
+        using var fixture = new GameFixture("original");
+        var result = await new InstallEngine(
+            fixture.Fingerprints,
+            null,
+            new FailOnHashCall(4, cancel: false)).InstallAsync(
+                fixture.Game,
+                fixture.BackupRoot,
+                new WritingPatcher("translated"),
+                CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.Equal("recovery_required", result.Code);
+        Assert.Contains("rollback", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.True(Directory.Exists(result.BackupDirectory));
+        Assert.NotEmpty(Directory.EnumerateFiles(fixture.Game.GameDirectory, ".hnh-vi-rollback-*.tmp"));
+        Assert.Equal("translated", await File.ReadAllTextAsync(fixture.Game.PckPath));
+    }
+
+    [Fact]
+    public async Task InstallAsync_preserves_recovery_files_when_post_replace_hash_is_cancelled()
+    {
+        using var fixture = new GameFixture("original");
+        using var cancellation = new CancellationTokenSource();
+        var result = await new InstallEngine(
+            fixture.Fingerprints,
+            null,
+            new FailOnHashCall(4, cancel: true, cancellation)).InstallAsync(
+                fixture.Game,
+                fixture.BackupRoot,
+                new WritingPatcher("translated"),
+                cancellation.Token);
+
+        Assert.False(result.Success);
+        Assert.Equal("recovery_required", result.Code);
+        Assert.Contains("rollback", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.True(Directory.Exists(result.BackupDirectory));
+        Assert.NotEmpty(Directory.EnumerateFiles(fixture.Game.GameDirectory, ".hnh-vi-rollback-*.tmp"));
+        Assert.Equal("translated", await File.ReadAllTextAsync(fixture.Game.PckPath));
+    }
+
+    [Fact]
+    public async Task InstallAsync_preserves_recovery_files_when_first_move_reports_after_moving()
+    {
+        using var fixture = new GameFixture("original");
+        var result = await new InstallEngine(fixture.Fingerprints, new MoveThenFail()).InstallAsync(
+            fixture.Game,
+            fixture.BackupRoot,
+            new WritingPatcher("translated"),
+            CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.Equal("recovery_required", result.Code);
+        Assert.Contains("rollback", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.True(Directory.Exists(result.BackupDirectory));
+        Assert.NotEmpty(Directory.EnumerateFiles(fixture.Game.GameDirectory, ".hnh-vi-rollback-*.tmp"));
+        Assert.False(File.Exists(fixture.Game.PckPath));
+    }
+
+    [Fact]
     public async Task RestoreAsync_preserves_recovery_files_when_move_back_fails()
     {
         using var fixture = new GameFixture("original");
@@ -192,6 +253,36 @@ public sealed class InstallEngineTests
             if (_moveCount >= 2)
                 throw new IOException("synthetic move-back failure");
             File.Move(source, destination);
+        }
+    }
+
+    private sealed class MoveThenFail : IInstallFileMover
+    {
+        public void Move(string source, string destination)
+        {
+            File.Move(source, destination);
+            throw new IOException("synthetic post-move failure");
+        }
+    }
+
+    private sealed class FailOnHashCall(int failingCall, bool cancel, CancellationTokenSource? cancellation = null) : IInstallFileHasher
+    {
+        private int _callCount;
+
+        public async Task<string> HashAsync(string path, CancellationToken cancellationToken)
+        {
+            if (++_callCount == failingCall)
+            {
+                if (cancel)
+                {
+                    cancellation?.Cancel();
+                    throw new OperationCanceledException(cancellationToken);
+                }
+                throw new IOException("synthetic post-replace hash failure");
+            }
+
+            await using var stream = File.OpenRead(path);
+            return Convert.ToHexString(await SHA256.HashDataAsync(stream, cancellationToken));
         }
     }
 
