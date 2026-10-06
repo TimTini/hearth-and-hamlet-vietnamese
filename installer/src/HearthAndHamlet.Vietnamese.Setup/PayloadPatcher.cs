@@ -38,9 +38,14 @@ public sealed class PayloadPatcher : IPayloadPatcher
                 RedirectStandardError = true,
                 CreateNoWindow = true
             };
+            // Decompress with patch-from and explicit output; omit force so existing files are refused.
+            // --long matches the window used when the delta was created for ~858 MiB PCK files.
+            startInfo.ArgumentList.Add("-d");
+            startInfo.ArgumentList.Add("--long=30");
             startInfo.ArgumentList.Add("--patch-from");
             startInfo.ArgumentList.Add(sourcePck);
             startInfo.ArgumentList.Add(deltaPath);
+            startInfo.ArgumentList.Add("-o");
             startInfo.ArgumentList.Add(outputPck);
 
             using var process = Process.Start(startInfo) ?? throw new InvalidOperationException("Could not start the embedded patcher.");

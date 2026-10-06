@@ -285,7 +285,7 @@ public sealed class InstallEngine
             try
             {
                 await using var stream = File.OpenRead(metadataPath);
-                var metadata = await JsonSerializer.DeserializeAsync<BackupMetadata>(stream, cancellationToken: cancellationToken);
+                var metadata = await JsonSerializer.DeserializeAsync(stream, BackupMetadataJsonContext.Default.BackupMetadata, cancellationToken);
                 if (metadata is null ||
                     metadata.BuildId != ReleaseConstants.BuildId ||
                     metadata.GameVersion != ReleaseConstants.GameVersion ||
@@ -318,7 +318,7 @@ public sealed class InstallEngine
         };
         var path = Path.Combine(directory, ReleaseConstants.BackupMetadataFileName);
         await using var stream = File.Create(path);
-        await JsonSerializer.SerializeAsync(stream, metadata, cancellationToken: cancellationToken);
+        await JsonSerializer.SerializeAsync(stream, metadata, BackupMetadataJsonContext.Default.BackupMetadata, cancellationToken);
     }
 
     private FileStream OpenExecutableLock(string path) =>
@@ -435,16 +435,6 @@ public sealed class InstallEngine
                 Directory.Delete(backupRoot);
         }
         catch { }
-    }
-
-    private sealed class BackupMetadata
-    {
-        public string BuildId { get; set; } = string.Empty;
-        public string GameVersion { get; set; } = string.Empty;
-        public string ExecutableSha256 { get; set; } = string.Empty;
-        public string OriginalPckSha256 { get; set; } = string.Empty;
-        public string TranslatedPckSha256 { get; set; } = string.Empty;
-        public DateTimeOffset CreatedUtc { get; set; }
     }
 
     private sealed record BackupInfo(string Directory, string PckPath);

@@ -18,11 +18,15 @@ extracted/
 workspace/
 dist/
 backups/
+installer/payload/
+installer/**/bin/
+installer/**/obj/
 *.pck
 *.exe
 *.dll
 *.so
 *.dylib
+payload.patch.zst
 
 # Local translation drafts, one-off helpers and internal progress notes
 work/

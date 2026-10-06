@@ -1,4 +1,4 @@
-# One-click Installer Implementation Plan
+﻿# One-click Installer Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -51,42 +51,42 @@
 **Interfaces:**
 - Produces: `IEnumerable<string> GameLocator.FindCandidates(string executableDirectory, string currentDirectory, IEnumerable<string> steamRoots)`, `Task<InstallResult> InstallEngine.InstallAsync(GamePaths game, string backupRoot, IPayloadPatcher patcher, CancellationToken cancellationToken)`, `Task<InstallResult> InstallEngine.RestoreAsync(GamePaths game, string backupRoot, CancellationToken cancellationToken)`, `InstallerOptions.Parse(string[] args)`, and CLI exit codes usable by packaging/E2E tests.
 
-- [ ] **Step 1: Write failing tests for options and discovery**
+- [x] **Step 1: Write failing tests for options and discovery**
 
   Cover explicit `--game-dir`, `--install`, `--restore`, `--yes`, `--no-pause`; discovery from the installer directory and Steam `libraryfolders.vdf`; Unicode/space paths; malformed VDF ignored without accepting an invalid game directory.
 
-- [ ] **Step 2: Run the focused tests and confirm RED**
+- [x] **Step 2: Run the focused tests and confirm RED**
 
   Run: `dotnet test installer/tests/HearthAndHamlet.Vietnamese.Setup.Tests/HearthAndHamlet.Vietnamese.Setup.Tests.csproj --filter "FullyQualifiedName~InstallerOptionsTests|FullyQualifiedName~GameLocatorTests"`
   Expected: build/test failure because the production types do not exist.
 
-- [ ] **Step 3: Implement the minimum parser and game discovery**
+- [x] **Step 3: Implement the minimum parser and game discovery**
 
   Candidate directories are accepted only when both `Hearth and Hamlet.exe` and `Hearth and Hamlet.pck` exist. Registry reads and VDF parsing are isolated so tests can supply roots/files without changing the machine registry.
 
-- [ ] **Step 4: Run focused tests and confirm GREEN**
+- [x] **Step 4: Run focused tests and confirm GREEN**
 
   Run the command from Step 2. Expected: all selected tests pass.
 
-- [ ] **Step 5: Write failing engine tests**
+- [x] **Step 5: Write failing engine tests**
 
   Use synthetic files and an injected patcher. Cover: valid install backup and target hash; unsupported EXE/PCK; already installed; valid restore; stale/malformed backup; changed current game; patch failure; post-replace hash failure with rollback; and read-only/unwritable destination.
 
-- [ ] **Step 6: Run engine tests and confirm RED**
+- [x] **Step 6: Run engine tests and confirm RED**
 
   Run: `dotnet test installer/tests/HearthAndHamlet.Vietnamese.Setup.Tests/HearthAndHamlet.Vietnamese.Setup.Tests.csproj --filter FullyQualifiedName~InstallEngineTests`
   Expected: failures because install/restore behavior is missing.
 
-- [ ] **Step 7: Implement safe install, restore, and console orchestration**
+- [x] **Step 7: Implement safe install, restore, and console orchestration**
 
   Hash with streaming SHA-256; store backup metadata without personal paths; stage output in the game directory; verify before replace; retain a rollback file until post-replace verification succeeds; hold the game EXE open with restrictive sharing; use `ProcessStartInfo.ArgumentList` for Zstandard; clean only the installer-owned temporary directory.
 
-- [ ] **Step 8: Run the complete .NET test project**
+- [x] **Step 8: Run the complete .NET test project**
 
   Run: `dotnet test installer/tests/HearthAndHamlet.Vietnamese.Setup.Tests/HearthAndHamlet.Vietnamese.Setup.Tests.csproj --configuration Release`
   Expected: zero failed tests and zero warnings.
 
-- [ ] **Step 9: Commit the task**
+- [x] **Step 9: Commit the task**
 
   Stage only the installer source/test files and commit `Add safe one-click installer core`.
 
@@ -97,42 +97,47 @@
 - Create: `scripts/build-installer.ps1`
 - Create: `installer/third_party/zstd-LICENSE`
 - Create: `tests/python/test_build_installer_script.py`
+- Modify: `installer/src/HearthAndHamlet.Vietnamese.Setup/HearthAndHamlet.Vietnamese.Setup.csproj`
+- Modify: `installer/src/HearthAndHamlet.Vietnamese.Setup/PayloadPatcher.cs`
+- Modify: `installer/tests/HearthAndHamlet.Vietnamese.Setup.Tests/InstallEngineTests.cs`
 - Modify: `.gitignore`
 
 **Interfaces:**
 - Consumes: the Task 1 app project and exact hashes in `ReleaseConstants`.
 - Produces: `scripts/build-installer.ps1 -OriginalPck <path> -TranslatedPck <path>`, `dist/installer/Hearth-and-Hamlet-Tieng-Viet-Setup.exe`, and adjacent `.sha256`.
 
-- [ ] **Step 1: Write failing static/build-script tests**
+- [x] **Step 1: Write failing static/build-script and payload invocation tests**
 
   Assert pinned HTTPS URL/version/hash, hash verification before extraction, literal path handling, ignored payload/build outputs, exact output filename, self-contained `win-x64` single-file publish properties, and bundled Zstandard license.
+  Assert the runtime invokes Zstandard in decompression mode with `--patch-from`,
+  an explicit output path and non-overwrite behavior before the final verified swap.
 
-- [ ] **Step 2: Run the focused Python test and confirm RED**
+- [x] **Step 2: Run the focused Python test and confirm RED**
 
   Run: `uv run pytest -q tests/python/test_build_installer_script.py`
   Expected: failures because the manifest/script/license do not exist.
 
-- [ ] **Step 3: Add the pinned tool manifest, license, ignores, and build script**
+- [x] **Step 3: Add the pinned tool manifest, license, ignores, and build script**
 
   The script downloads only when the verified tool is absent, refuses wrong input hashes, creates a Zstandard level-19 delta, embeds the delta and pinned `zstd.exe` through MSBuild properties, publishes .NET 8 self-contained/single-file/trimmed, then writes the EXE SHA-256.
 
-- [ ] **Step 4: Run focused tests and confirm GREEN**
+- [x] **Step 4: Run focused tests and confirm GREEN**
 
   Run the command from Step 2. Expected: all tests pass.
 
-- [ ] **Step 5: Build the real release payload**
+- [x] **Step 5: Build the real release payload**
 
   Use the verified original backup and latest translated artifact. Record download hash, delta size, output size, elapsed time and exit code in `work/one-click-release-progress.md`.
 
-- [ ] **Step 6: Run real copied-game E2E**
+- [x] **Step 6: Run real copied-game E2E**
 
   In a uniquely named temporary directory, copy the supported game EXE/PCK, run the built installer with `--install --yes --no-pause`, verify installed SHA and backup SHA, then run `--restore --yes --no-pause` and verify original SHA. Repeat with a deliberately changed PCK and verify nonzero exit plus no mutation/backup.
 
-- [ ] **Step 7: Run full local regression checks**
+- [x] **Step 7: Run full local regression checks**
 
   Run: `dotnet test installer/tests/HearthAndHamlet.Vietnamese.Setup.Tests/HearthAndHamlet.Vietnamese.Setup.Tests.csproj --configuration Release`, `uv run pytest -q`, `uv run ruff check src tests/python`, `uv run hnh-vi validate --required-keys .\localization\phase1.keys`, `uv run hnh-vi coverage --selected-keys .\localization\phase1.keys`, and `git diff --check`.
 
-- [ ] **Step 8: Commit the task**
+- [x] **Step 8: Commit the task**
 
   Stage only source, test, manifest, license and ignore changes; never stage `dist/`, `.tools/`, payloads or PCK files. Commit `Build self-contained Vietnamese installer`.
 

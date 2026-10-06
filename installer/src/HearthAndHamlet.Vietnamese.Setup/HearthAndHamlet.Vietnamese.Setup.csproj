@@ -7,5 +7,24 @@
     <RootNamespace>HearthAndHamlet.Vietnamese.Setup</RootNamespace>
     <AssemblyName>HearthAndHamlet.Vietnamese.Setup</AssemblyName>
     <InvariantGlobalization>true</InvariantGlobalization>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <PublishTrimmed>true</PublishTrimmed>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <InstallerZstdPath Condition="'$(InstallerZstdPath)' == ''"></InstallerZstdPath>
+    <InstallerDeltaPath Condition="'$(InstallerDeltaPath)' == ''"></InstallerDeltaPath>
   </PropertyGroup>
+
+  <ItemGroup Condition="'$(InstallerZstdPath)' != '' and Exists('$(InstallerZstdPath)')">
+    <EmbeddedResource Include="$(InstallerZstdPath)">
+      <LogicalName>zstd.exe</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(InstallerDeltaPath)' != '' and Exists('$(InstallerDeltaPath)')">
+    <EmbeddedResource Include="$(InstallerDeltaPath)">
+      <LogicalName>payload.patch.zst</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
 </Project>
