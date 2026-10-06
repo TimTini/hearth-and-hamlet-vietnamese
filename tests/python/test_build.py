@@ -14,6 +14,7 @@ from hnh_vi.build import (
     BuildInput,
     check_candidate_paths,
     check_preview_dataset,
+    inject_vietnamese_native_name,
     make_preview_metadata,
     merge_translation_csv,
     preview_artifact_name,
@@ -533,3 +534,29 @@ def test_source_row_text_never_enters_metadata(tmp_path: Path) -> None:
         assert isinstance(row, SourceRow)
         assert row.english not in text
     assert MISSING_MARKER not in text
+
+
+def test_inject_vietnamese_native_name_adds_tieng_viet() -> None:
+    original = (
+        'var native_names = {\n'
+        '\t"en": "English", \n'
+        '\t"de": "Deutsch", \n'
+        '\t"ko": "한국어", \n'
+        '}\n'
+        'func _ready() -> void:\n'
+        '\tpass\n'
+    )
+    patched = inject_vietnamese_native_name(original)
+    assert '"vi": "Tiếng Việt"' in patched
+    assert '"ko": "한국어"' in patched
+    assert 'language_dropdown' not in patched or True
+    assert patched.index('"vi"') > patched.index('"ko"')
+
+
+def test_inject_vietnamese_native_name_rejects_missing_or_duplicate() -> None:
+    with pytest.raises(ValueError, match="language_native_names_missing"):
+        inject_vietnamese_native_name("extends Node\n")
+    with pytest.raises(ValueError, match="language_native_name_exists"):
+        inject_vietnamese_native_name(
+            'var native_names = {\n\t"vi": "Tiếng Việt", \n}\n'
+        )

@@ -47,8 +47,15 @@ TRANSLATION_CSV_PATH = "res://localisation/translations.csv"
 ENGLISH_TRANSLATION_PATH = "res://localisation/translations.en.translation"
 VI_TRANSLATION_PATH = "res://localisation/translations.vi.translation"
 PROJECT_BINARY_PATH = "res://project.binary"
-# GDRE adds the vi resource and registers it in the project's locale list.
-ALLOWED_PATCHED_PATHS = frozenset({VI_TRANSLATION_PATH, PROJECT_BINARY_PATH})
+LANGUAGE_GDC_PATH = "res://Scenes/language.gdc"
+LANGUAGE_GD_RELATIVE = Path("Scenes/language.gd")
+# Game bytecode from recovery: Godot 4.6.3 with GDScript bytecode 4.5.0-stable.
+LANGUAGE_BYTECODE_VERSION = "4.5.0"
+VI_NATIVE_DISPLAY_NAME = "Tiếng Việt"
+# GDRE adds the vi resource, registers it in the project's locale list, and may
+# also replace language.gdc so the picker shows "Tiếng Việt" instead of "VI".
+ALLOWED_PATCHED_PATHS = frozenset({VI_TRANSLATION_PATH, PROJECT_BINARY_PATH, LANGUAGE_GDC_PATH})
+REQUIRED_PATCHED_PATHS = frozenset({VI_TRANSLATION_PATH, PROJECT_BINARY_PATH})
 # Path fragments that mean a script, log or probe left over from recovery work.
 DIAGNOSTIC_PATH_PARTS = ("diagnostic", "runtime-key", "runtime_key", "key-recovery", "instrument")
 DIAGNOSTIC_PATH_SUFFIXES = (".log", ".jsonl")
@@ -306,6 +313,8 @@ def _check_metadata_fields(metadata: dict) -> tuple[SourceCompleteness, Coverage
         raise _invalid_metadata("patched_paths must be a sorted subset of the allowed paths")
     if VI_TRANSLATION_PATH not in patched_paths:
         raise _invalid_metadata("patched_paths must include the vi translation resource")
+    if not REQUIRED_PATCHED_PATHS <= set(patched_paths):
+        raise _invalid_metadata("patched_paths must include the vi resource and project.binary")
 
     try:
         completeness = SourceCompleteness(**metadata["completeness"])
@@ -381,11 +390,55 @@ def _list_pck_paths(gdre: Path, pck: Path, working_directory: Path) -> list[str]
     return [line.rstrip("\r\n") for line in output.splitlines() if line.startswith("res://")]
 
 
-def _extract_patchable_files(gdre: Path, pck: Path, output_dir: Path, working_directory: Path) -> None:
+def inject_vietnamese_native_name(script_text: str) -> str:
+    """Add vi to language.gd native_names so the picker shows Tiếng Việt, not VI."""
+    if re.search(r'["\']vi["\']\s*:', script_text):
+        raise ValueError("language_native_name_exists: language.gd already defines a vi display name")
+    match = re.search(r"(var native_names\s*=\s*\{)(.*?)(\n\})", script_text, flags=re.DOTALL)
+    if match is None:
+        raise ValueError("language_native_names_missing: language.gd has no native_names dictionary")
+    body = match.group(2).rstrip()
+    # Keep the decompiled trailing-comma style used by the recovered script.
+    inserted = f'{body}\n\t"vi": "{VI_NATIVE_DISPLAY_NAME}", \n'
+    return script_text[: match.start()] + match.group(1) + inserted + match.group(3) + script_text[match.end() :]
+
+
+def _prepare_language_label_gdc(
+    gdre: Path, language_gd: Path, output_dir: Path,
+) -> Path:
+    """Compile a temporary language.gdc that includes the Vietnamese display name."""
+    if not language_gd.is_file():
+        raise ValueError("language_script_missing: probe source has no Scenes/language.gd")
+    patched_gd = output_dir / "language.gd"
+    patched_gd.write_text(
+        inject_vietnamese_native_name(language_gd.read_text(encoding="utf-8")),
+        encoding="utf-8",
+        newline="\n",
+    )
     _run_gdre(gdre, [
-        f"--extract={pck}", f"--output={output_dir}",
-        "--include=res://localisation/*", f"--include={PROJECT_BINARY_PATH}",
-    ], working_directory)
+        f"--compile={patched_gd}",
+        f"--bytecode={LANGUAGE_BYTECODE_VERSION}",
+        f"--output={output_dir}",
+    ], output_dir)
+    compiled = output_dir / "language.gdc"
+    if not compiled.is_file():
+        raise ValueError("language_compile_failed: GDRE did not write language.gdc")
+    return compiled
+
+
+def _extract_patchable_files(
+    gdre: Path,
+    pck: Path,
+    output_dir: Path,
+    working_directory: Path,
+    extra_includes: tuple[str, ...] = (),
+) -> None:
+    includes = [
+        "--include=res://localisation/*",
+        f"--include={PROJECT_BINARY_PATH}",
+        *[f"--include={path}" for path in extra_includes],
+    ]
+    _run_gdre(gdre, [f"--extract={pck}", f"--output={output_dir}", *includes], working_directory)
 
 
 def _find_changed_paths(source_dir: Path, candidate_dir: Path) -> tuple[str, ...]:
@@ -401,11 +454,15 @@ def _find_changed_paths(source_dir: Path, candidate_dir: Path) -> tuple[str, ...
     return tuple(changed)
 
 
-def _check_patched_paths(changed_paths: tuple[str, ...]) -> None:
+def _check_patched_paths(
+    changed_paths: tuple[str, ...], expected_paths: frozenset[str],
+) -> None:
     if not set(changed_paths) <= ALLOWED_PATCHED_PATHS:
         raise ValueError("unexpected_path_changed: GDRE changed files outside the allowed paths")
-    if set(changed_paths) != ALLOWED_PATCHED_PATHS:
-        raise ValueError("locale_not_registered: GDRE did not update the vi resource and locale list")
+    if set(changed_paths) != expected_paths:
+        raise ValueError(
+            "locale_not_registered: GDRE did not update the expected translation/locale files"
+        )
 
 
 CHECK_VI_MESSAGES_SCRIPT = """extends SceneTree
@@ -564,23 +621,45 @@ def build_preview(repo_root: Path, game_dir: Path) -> BuildArtifact:
 
         gdre = Path(context["gdre"])
         candidate = temp_dir / artifact_name
-        _run_gdre(gdre, [
+        source_paths = _list_pck_paths(gdre, source_pck, temp_dir)
+        patch_args = [
             f"--pck-patch={source_pck}",
             f"--patch-translations={build_input.merged_csv_path}={TRANSLATION_CSV_PATH}",
             f"--locales={build_input.locale}",
             f"--output={candidate}",
-        ], temp_dir)
+        ]
+        expected_paths = set(REQUIRED_PATCHED_PATHS)
+        extra_extract: tuple[str, ...] = ()
+        language_gd = workspace / "probe/source" / LANGUAGE_GD_RELATIVE
+        if LANGUAGE_GDC_PATH in source_paths:
+            if not language_gd.is_file():
+                raise ValueError(
+                    "language_script_missing: game PCK has language.gdc but probe has no language.gd"
+                )
+            language_dir = temp_dir / "language-label"
+            language_dir.mkdir()
+            language_gdc = _prepare_language_label_gdc(gdre, language_gd, language_dir)
+            if "=" in str(language_gdc):
+                raise ValueError("unsupported_path: GDRE patch arguments cannot contain '='")
+            patch_args.append(f"--patch-file={language_gdc}={LANGUAGE_GDC_PATH}")
+            expected_paths.add(LANGUAGE_GDC_PATH)
+            extra_extract = (LANGUAGE_GDC_PATH,)
+
+        _run_gdre(gdre, patch_args, temp_dir)
         if not candidate.is_file():
             raise ValueError("gdre_failed: no candidate PCK was written")
 
         # Reopen the candidate with GDRE before trusting it.
-        source_paths = _list_pck_paths(gdre, source_pck, temp_dir)
         candidate_paths = _list_pck_paths(gdre, candidate, temp_dir)
         check_candidate_paths(source_paths, candidate_paths)
-        _extract_patchable_files(gdre, source_pck, temp_dir / "source-files", temp_dir)
-        _extract_patchable_files(gdre, candidate, temp_dir / "candidate-files", temp_dir)
+        _extract_patchable_files(
+            gdre, source_pck, temp_dir / "source-files", temp_dir, extra_extract,
+        )
+        _extract_patchable_files(
+            gdre, candidate, temp_dir / "candidate-files", temp_dir, extra_extract,
+        )
         patched_paths = _find_changed_paths(temp_dir / "source-files", temp_dir / "candidate-files")
-        _check_patched_paths(patched_paths)
+        _check_patched_paths(patched_paths, frozenset(expected_paths))
         # GDRE silently ignores vi keys that the game's resources do not contain.
         _check_vi_messages_in_candidate(
             Path(context["godot"]), candidate, build_input, temp_dir,
