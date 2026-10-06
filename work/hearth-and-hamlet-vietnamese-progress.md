@@ -199,38 +199,38 @@ nhầm. Chưa có `-Apply` hoặc game launch nào được thực hiện.
 - Verification local: focused CLI 10 passed; full `uv run pytest -q` xanh;
   Ruff sạch trên `cli.py` / `test_cli.py`. Chưa commit — chờ review độc lập.
 
-## Partial preview ? Task 5 Phase 1 n?i dung, 2026-10-06
+## Partial preview — Task 5 Phase 1 nội dung, 2026-10-06
 
-- Ph?m vi: d?ch ??t 1 (menu, t?y ch?n, ng?n ng?, ?? kh?, credits, game over,
-  th?ng b?o h? th?ng, t?n t?i nguy?n c? b?n, nh?n tr?ng th?i chung). Base:
+- Phạm vi: dịch Đợt 1 (menu, tùy chọn, ngôn ngữ, độ khó, credits, game over,
+  thông báo hệ thống, tên tài nguyên cơ bản, nhãn trạng thái chung). Base:
   `f07cd1b28658925025ab8ce85901d13febeae6fc`.
-- Ch?n ch?nh x?c 111 key trong `localization/phase1.keys`, tr?n t?ng 1.811 key
-  duy nh?t ?? ph?c h?i. 111 key c? b?n d?ch v? `reviewed`; kh?ng c? `in_game`.
-- Nh?m ?? ch?n: MAIN_MENU, GAME_MENU, l?u/t?i, ng?n ng?, OPTIONS/OPT, UI_SCALE,
-  DIFFICULTY v? x?c nh?n ??i ?? kh?, CREDITS, GAME_OVER, NOTIFICATION h? th?ng,
-  t?i nguy?n v? nh?n tr?ng th?i chung.
-- Lo?i kh?i ??t: BU_*, UPG_*, *_IMPROVEMENT_*, POLICY_*, TRADE_*, QUEST_*,
-  TUTORIAL_*, ACH_*, ITEM_*, END_* v? c?c key giao th??ng/qu?n s?/c?t truy?n.
-- `blocked` (7 key, kh?ng n?m trong `phase1.keys`): n?m key thang ?? kh? DIF_*,
-  `HAPPINESS_A` (gi? tr? ngu?n gi?ng placeholder) v?
-  `NOTIFICATION_CARAVAN_RETURNED` (kh?ng r? `{type}` l? lo?i hay quy m?).
-- Key ngo?i `phase1.keys` gi? `translation_vi` tr?ng theo ruling Task 4; kh?ng
-  ?i?n b?n d?ch nh?p.
-- Glossary: 28 d?ng thu?t ng? (t?i nguy?n, qu?n s?, l?u/t?i, b?n t?n ?? kh?).
-  `docs/translation-guide.md` ghi quy tr?nh, v?n phong v? quy t?c k? hi?u.
+- Chọn chính xác 111 key trong `localization/phase1.keys`, trên tổng 1.811 key
+  duy nhất đã phục hồi. 111 key có bản dịch và `reviewed`; không có `in_game`.
+- Nhóm đã chọn: MAIN_MENU, GAME_MENU, lưu/tải, ngôn ngữ, OPTIONS/OPT, UI_SCALE,
+  DIFFICULTY và xác nhận đổi độ khó, CREDITS, GAME_OVER, NOTIFICATION hệ thống,
+  tài nguyên và nhãn trạng thái chung.
+- Loại khỏi đợt: BU_*, UPG_*, *_IMPROVEMENT_*, POLICY_*, TRADE_*, QUEST_*,
+  TUTORIAL_*, ACH_*, ITEM_*, END_* và các key giao thương/quân sự/cốt truyện.
+- `blocked` (7 key, không nằm trong `phase1.keys`): năm key thang độ khó DIF_*,
+  `HAPPINESS_A` (giá trị nguồn giống placeholder) và
+  `NOTIFICATION_CARAVAN_RETURNED` (không rõ `{type}` là loại hay quy mô).
+- Key ngoài `phase1.keys` giữ `translation_vi` trống theo ruling Task 4; không
+  điền bản dịch nháp.
+- Glossary: 28 dòng thuật ngữ (tài nguyên, quân sự, lưu/tải, bốn tên độ khó).
+  `docs/translation-guide.md` ghi quy trình, văn phong và quy tắc ký hiệu.
 - Validate: `uv run hnh-vi validate --required-keys localization/phase1.keys`
-  ? exit 0, 0 l?i, 8 c?nh b?o `duplicate_source_key` ?? bi?t, 0 c?nh b?o glossary.
-- Coverage: selected 111/111 translated v? reviewed (ratio 1.0); to?n dataset
+  → exit 0, 0 lỗi, 8 cảnh báo `duplicate_source_key` đã biết, 0 cảnh báo glossary.
+- Coverage: selected 111/111 translated và reviewed (ratio 1.0); toàn dataset
   111 reviewed, 7 blocked, 1.693 draft; `source_complete=false`,
-  `maximum_known_source_ratio?0.9854`, 27 d?ng ch?a ph?c h?i.
-- Build: `scripts/build.ps1 -GameDir <game>` exit 0, kh?ng `-Apply`. Preview PCK v?
-  metadata JSON n?m trong `dist/25600292/` (ignored); metadata: `release_quality=preview`,
+  `maximum_known_source_ratio≈0.9854`, 27 dòng chưa phục hồi.
+- Build: `scripts/build.ps1 -GameDir <game>` exit 0, không `-Apply`. Preview PCK và
+  metadata JSON nằm trong `dist/25600292/` (ignored); metadata: `release_quality=preview`,
   `source_complete=false`, `fallback_locale=en`, 111 translated, 1.700 omitted empty.
-  Patched paths: `translations.vi.translation` v? `project.binary`.
-  PCK preview SHA-256 `63285783?B41A3` (byte c? th? kh?c khi build l?i).
-- EXE/PCK g?c tr??c v? sau build ??u l? `7D37BBF3?F9A2A` / `7D5A2113?E0201`,
-  kh?ng ??i. Ch?a install, ch?a launch game; Phase 1 v?n c?n smoke test th?c t?
-  (ch?n Ti?ng Vi?t, font/d?u, l?u l?a ch?n ng?n ng?, k?ch th??c n?t).
-- L?u ? runtime: danh s?ch ng?n ng? trong game l? `native_names` ? script
-  `language.gd`; ch?a x?c minh b?n vi hi?n ?? c? m?c ch?n "Ti?ng Vi?t" hay ch?a,
-  c?n ki?m tra khi smoke.
+  Patched paths: `translations.vi.translation` và `project.binary`.
+  PCK preview SHA-256 `63285783…B41A3` (byte có thể khác khi build lại).
+- EXE/PCK gốc trước và sau build đều là `7D37BBF3…F9A2A` / `7D5A2113…E0201`,
+  không đổi. Chưa install, chưa launch game; Phase 1 vẫn cần smoke test thực tế
+  (chọn Tiếng Việt, font/dấu, lưu lựa chọn ngôn ngữ, kích thước nút).
+- Lưu ý runtime: danh sách ngôn ngữ trong game là `native_names` ở script
+  `language.gd`; chưa xác minh bản vi hiện đã có mục chọn "Tiếng Việt" hay chưa,
+  cần kiểm tra khi smoke (chuyển cho Task 7).
