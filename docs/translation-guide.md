@@ -88,3 +88,7 @@ tiến chi tiết từng ngành vẫn để các đợt sau.
 Khi tiếng Anh mơ hồ, đối chiếu cùng key ở cột `de` / `zh_CN` / `ko` (và ngôn ngữ
 khác nếu cần) chỉ để hiểu nghĩa; câu tiếng Việt vẫn dịch theo ý EN, không dịch
 máy nguyên văn từ KO/ZH. Không đủ chắc thì để `blocked` kèm ghi chú.
+
+## Quy ước số liệu
+
+- Trong nội dung tiếng Việt, dùng dấu chấm phân cách hàng nghìn cho số nguyên từ 1.000 trở lên (ví dụ: 1.200).

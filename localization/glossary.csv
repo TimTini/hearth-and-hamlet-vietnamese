@@ -15,7 +15,7 @@ Town,thị trấn,,Nơi người chơi xây dựng
 Trade,giao thương,,
 Research,nghiên cứu,,
 Starvation,nạn đói,,
-Population,dân số,,
+Population,dân,,Dùng theo ngữ cảnh: dân số/người dân
 Save,lưu,,Danh từ: 'bản lưu'; động từ: 'lưu'
 Slot,ô lưu,,Chỉ dùng cho ô lưu game
 Load,tải,,Tải game / tải bản lưu
@@ -35,21 +35,39 @@ Amenities,tiện nghi,,
 Caravan,đoàn buôn,,
 Spare workers,nhân công dư,,Nhân công chưa phân công
 Tithes,thuế thập phân,,Chính sách thuế nhà thờ
-Shop,cửa hàng,,
+Shop,cửa hàng,BI_SHOP,
 Sanitation,vệ sinh,,Hạng mục thưởng hạnh phúc từ đường/hạ tầng
 Quarry,mỏ đá,,Công trình khai thác đá
 Warehouse,kho,,Kho chứa tài nguyên
 Moat,hào nước,,Phòng thủ quanh tường thành
-Shipwright,xưởng đóng tàu,,
+Shipwright,đóng tàu,,Dùng trong cụm nghiên cứu đóng tàu
 Alchemist,giả kim,,Nhãn ngắn / trang nâng cấp
 Blacksmith,lò rèn,,
 Carpenter,thợ mộc,,
 Hunting,săn bắn,,
-Fishing,đánh cá,,Hoạt động / trang nâng cấp
+Fishing,đánh cá,FISHING,Hoạt động / trang nâng cấp
 Swamp,đầm lầy,,
 Guards,vệ binh,,Trang nâng cấp thị vệ
-Skilled Labour,lao động lành nghề,,Hệ số nhân công lành nghề
+Skilled Labour,nhân công lành nghề,,Hệ số nhân công lành nghề
 Quest,nhiệm vụ,,
 Undead,xác sống,,Loài undead; dùng 'xác sống' trong UI
 Wizard,pháp sư,,
 Hero,anh hùng,,
+Fishing Hut,Lều ngư dân,,
+Fisherman's Hut,Lều ngư dân,,
+Woodcutter's Hut,Lều tiều phu,,
+Woodcutter's Lodge,Nhà tiều phu,,
+Docks,Bến cảng,,
+Goblin,Goblin,,
+Plague Mosquito,Muỗi mang dịch bệnh,,
+Huge Rat,Chuột cỡ lớn,,
+Giant Rat,Chuột khổng lồ,,
+Beholder Spawn,Ấu thể Beholder,,
+Community Outreach,Phục vụ cộng đồng,,
+Social Welfare,Phúc lợi xã hội,,
+Skilled Labour Multiplier,Hệ số nhân công lành nghề,,
+Birth rate,tỷ lệ sinh,,
+Soldier attack damage,sát thương tấn công cho binh lính,,
+Soldier defence,phòng thủ cho binh lính,,
+Caravan time,thời gian di chuyển của đoàn buôn,,
+Carpentry Shop,Xưởng mộc,BU_CARPENTER_5_NAME,
