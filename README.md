@@ -2,10 +2,15 @@
 
 Dự án Việt hóa **Hearth and Hamlet** theo văn phong tự nhiên, dễ chơi.
 
-Trạng thái hiện tại: Phase 1 preview (111 key giao diện) đã dịch, build candidate và dry-run cài/gỡ đã chạy trên build Steam `25600292`.
-**Chưa** apply vào game: cài thật, mở game và smoke test cần người dùng ủy quyền
-tường minh — xem
-[`docs/phase-1-smoke-checklist.md`](docs/phase-1-smoke-checklist.md). Theo dõi checkpoint tại
+Trạng thái hiện tại: Phase 1 preview (111 key giao diện) đã được người dùng ủy
+quyền cài thật (`-Apply`) vào game tại `<GameDir>`
+(Steam build `25600292`). PCK game hiện khớp artifact preview; EXE không đổi.
+**Chưa** mở game và chưa smoke test trong game — bước này do người dùng thực hiện,
+xem [`docs/phase-1-smoke-checklist.md`](docs/phase-1-smoke-checklist.md).
+
+Gỡ bản preview bằng `scripts/uninstall.ps1 -GameDir "<thư mục game>" -Apply`; backup
+PCK gốc nằm dưới `%LOCALAPPDATA%\HearthAndHamletVietnamese\backups\25600292\`.
+Theo dõi checkpoint tại
 [`work/hearth-and-hamlet-vietnamese-progress.md`](work/hearth-and-hamlet-vietnamese-progress.md).
 
 Repo này chỉ lưu script, kiểm thử và nội dung dịch do dự án tạo ra. Không
@@ -111,8 +116,10 @@ Cả hai script mặc định là dry-run: chỉ kiểm tra và in kế hoạch,
 Test cài/gỡ chỉ dùng thư mục game giả lập trong thư mục tạm; không test nào ghi vào
 game Steam thật.
 
-## Checkpoint apply / smoke (ngoài biên tự động)
+## Checkpoint apply / smoke
 
-Checklist xác minh dry-run và các bước cần ủy quyền tường minh (`-Apply`,
-launch game, smoke UI, gỡ) nằm tại
+Preview đã được cài thật một lần với sự ủy quyền của người dùng. Các lần chạy sau
+của `install.ps1` / `uninstall.ps1` vẫn mặc định là dry-run; mọi thao tác ghi vào
+game (cài lại, gỡ `-Apply`) và việc mở game để smoke test vẫn cần người dùng xác
+nhận tường minh. Checklist smoke và bằng chứng dry-run/apply nằm tại
 [`docs/phase-1-smoke-checklist.md`](docs/phase-1-smoke-checklist.md).
