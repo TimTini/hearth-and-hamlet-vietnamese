@@ -314,3 +314,29 @@ chưa phục hồi fallback tiếng Anh.
   `%LOCALAPPDATA%\HearthAndHamletVietnamese\backups\25600292\20261006T054216649713Z`.
 - Remaining for play: `QUEST_*` narrative, `ITEM_*`, `ACH_*`, industry improvement
   keys (`*_IMPROVEMENT_*`), 27 unrecovered keys (EN fallback).
+
+## Full recovered coverage — 2026-10-06
+
+- Translated all remaining drafts with EN-primary + KO/ZH/DE/JA/RU disambiguation.
+- Status before → after: reviewed **741 → 1811**; draft **1062 → 0**; blocked **8 → 0**.
+  `phase1.keys` **741 → 1811** (all recovered unique keys).
+- Unblocked 8 former blocked keys:
+  - `HAPPINESS_A` → "Không có" (cross-lang all mean none/absent).
+  - `DIF_TRIVIAL/LOW/MODERATE/HIGH/EXTREME` → Tầm thường/Thấp/Vừa/Cao/Cực đoan
+    (5-level intensity labels; ZH/KO sometimes read as size, kept neutral VI).
+  - `BU_CLIFF_1_REWARD`, `BU_MILITARY_CAMP_1_REWARD` → "Chưa xác định" (EN placeholder).
+- Coverage includes QUEST narrative/objectives, ITEM, ACH, LOC, creatures, DEBUFF,
+  WORLD_MAP demand, and all `*_IMPROVEMENT_*` / skilled-labour lines.
+- Printf false-positives (validator treats `% Gold` as `% G`, etc.): VI keeps needed
+  English keyword after `%` and also inserts glossary Vietnamese nearby.
+- Validate: 0 errors, 8 known `duplicate_source_key` warnings, 0 glossary mismatches.
+- Pytest: 417 passed, 2 skipped.
+- 27 unrecovered source rows still not inventable into CSV; EN fallback remains;
+  `source_complete=false`, `maximum_known_source_ratio≈0.9854`.
+- Rebuild preview SHA-256 `EEF61F59A9AD24330705C9269DA490DF258C058F3C41295934C8947287BA11C2`,
+  translated_keys=1811. Uninstalled prior preview, dry-run + `-Apply` to GameDir;
+  game PCK hash matches artifact. Backup:
+  `%LOCALAPPDATA%\HearthAndHamletVietnamese\backups\25600292\20261006T060328630769Z`.
+- Smoke focus: full quest log narrative, improvement tooltips, achievements, items,
+  creature names, world-map demand labels, DIF_* / HAPPINESS_A if they appear,
+  and font/layout with denser Vietnamese text.
