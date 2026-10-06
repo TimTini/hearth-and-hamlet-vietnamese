@@ -237,20 +237,31 @@ nhầm. Chưa có `-Apply` hoặc game launch nào được thực hiện.
 
 ## Partial preview — Task 7 handoff dry-run, 2026-10-06
 
-- Verification tươi: `uv sync --locked` OK; pytest **415 passed, 2 skipped**;
-  Ruff sạch; `git diff --check` sạch.
-- Validate Phase 1: exit 0, 0 blocking; coverage selected 111/111 reviewed;
-  `source_complete=false`.
-- Rebuild: `scripts/build.ps1` →
+- Verification tươi trên `4c90333`: `uv sync --locked` OK; pytest **415 passed,
+  2 skipped** (2 test symlink thiếu quyền); Ruff sạch; `git diff --check` exit 0.
+- Validate Phase 1: exit 0, 0 lỗi, 8 cảnh báo duplicate đã biết; coverage selected
+  111/111 reviewed; `source_complete=false`.
+- Rebuild: `scripts/build.ps1` exit 0 →
   `dist/25600292/Hearth-and-Hamlet-vi-preview-1.1.0.pck` SHA-256
-  `59A0EB03…03431`; metadata `preview` / `fallback_locale=en` / 111 keys.
-- Install dry-run (không `-Apply`): exit 0; backup kế hoạch dưới
-  `%LOCALAPPDATA%\HearthAndHamletVietnamese\backups\25600292\20261006T041554245779Z`.
-- Uninstall dry-run khi chưa apply: `already_original` (đúng).
-- EXE/PCK gốc sau build + dry-run vẫn `7D37BBF3…F9A2A` / `7D5A2113…E0201`.
-- GameDir: `<GameDir>`.
-- Tài liệu: `docs/phase-1-smoke-checklist.md`. Apply/launch/smoke vẫn cần
-  ủy quyền tường minh; mục mở: locale hiện "VI", font/nút, 27 key thiếu.
+  `B04247D0…593D8` (lần build trước `59A0EB03…03431`). Hash PCK khác nhau là bình
+  thường (id sub-resource ngẫu nhiên của Godot); mọi trường metadata khác, kích
+  thước và patched paths giống hệt.
+- Install dry-run (không `-Apply`): exit 0; `current_pck_sha256` `7D5A2113…E0201`,
+  `new_pck_sha256` `B04247D0…593D8`; backup dự kiến dưới
+  `%LOCALAPPDATA%\HearthAndHamletVietnamese\backups\25600292\<UTC>`.
+- Uninstall dry-run: exit 1 `already_original` (từ chối đúng vì chưa cài).
+- EXE/PCK gốc sau build + dry-run vẫn `7D37BBF3…F9A2A` / `7D5A2113…E0201`; danh
+  sách file game không đổi; thư mục backup chưa được tạo; game chưa mở.
+- Review whole-branch cuối do controller thực hiện sau commit này.
+- Tài liệu: `docs/phase-1-smoke-checklist.md`.
+
+**Checkpoint cần ủy quyền người dùng:** `install.ps1 -Apply`, mở game, smoke UI,
+`uninstall.ps1 -Apply` và cài lại tùy chọn đều ghi/mở ngoài worktree; không chạy
+nếu chưa được xác nhận rõ.
+
+**Mục mở smoke:** danh sách ngôn ngữ có thể hiện "VI" thay vì "Tiếng Việt"
+(`language.gd` `native_names`); font/dấu/độ rộng nút chưa thử trong game; 27 key
+chưa phục hồi fallback tiếng Anh.
 
 ## Apply checkpoint — preview installed, 2026-10-06
 
