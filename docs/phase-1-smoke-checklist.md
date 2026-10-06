@@ -21,7 +21,8 @@ GameDir: `<GameDir>`.
 | `git diff --check` | exit 0 |
 | `hnh-vi verify-game` | `ok: true`, build `25600292`, EXE 1.1.0.0 |
 | `hnh-vi validate --required-keys localization/phase1.keys` | exit 0, 0 lỗi, 8 cảnh báo `duplicate_source_key` đã biết |
-| `hnh-vi coverage --selected-keys localization/phase1.keys` | selected 111/111 translated + reviewed; `source_complete=false`; 27 key chưa phục hồi |
+| `hnh-vi coverage --selected-keys localization/phase1.keys` | selected 263/263 translated + reviewed; `source_complete=false`; 27 key chưa phục hồi |
+
 | `scripts/build.ps1 -GameDir <game>` | exit 0, không `-Apply` |
 | File tracked | Không có PCK/EXE/DLL/asset; `workspace/`, `dist/`, `.tools/` bị ignore |
 
@@ -30,8 +31,9 @@ Artifact preview (nằm trong `dist/`, bị ignore, không commit):
 - `dist/25600292/Hearth-and-Hamlet-vi-preview-1.1.0.pck`, 857.730.692 byte.
 - SHA-256 lần build cuối: `B04247D059A8B4CEC654211179CBEB42A27FDF7CD7B5B548A29C47A6EDB593D8`.
 - Metadata: `release_quality=preview`, `source_complete=false`, `fallback_locale=en`,
-  `translated_keys=111`, `omitted_empty_keys=1700`, `locale=vi`.
-- `patched_paths`: `res://localisation/translations.vi.translation`, `res://project.binary`.
+  `translated_keys=263`, `omitted_empty_keys=1548`, `locale=vi`.
+- `patched_paths`: `res://Scenes/language.gdc`,
+  `res://localisation/translations.vi.translation`, `res://project.binary`.
 - Hash PCK nguồn trong metadata: `7D5A2113B5D63B40605413A70B707DC7F56AFC7DE02BCE34760E227BFE6E0201`.
 
 ### Hash artifact không ổn định giữa các lần build
@@ -92,8 +94,9 @@ overlay trước khi bắt đầu.
 ## 3. Checklist smoke trong game (chưa chạy)
 
 - [ ] Game khởi động, không crash, không treo ở màn hình tải.
-- [ ] Chọn được ngôn ngữ tiếng Việt trong Options. Có thể hiển thị **"VI"** thay vì
-  "Tiếng Việt" vì `language.gd` (`native_names`) chưa có tên bản địa cho `vi` — ghi lại.
+- [ ] Chọn được ngôn ngữ **Tiếng Việt** trong Options (build hiện tại patch
+  `Scenes/language.gdc` để thêm `"vi": "Tiếng Việt"` vào `native_names`; không còn
+  fallback `locale.to_upper()` → "VI").
 - [ ] Lựa chọn ngôn ngữ được lưu sau khi thoát và mở lại game.
 - [ ] Dấu tiếng Việt (ă â ê ô ơ ư đ và dấu thanh) hiển thị đúng, không ô vuông.
 - [ ] Menu chính, menu game, Options, lưu/tải: chữ không bị cắt, nút đủ rộng.
@@ -104,8 +107,10 @@ overlay trước khi bắt đầu.
 
 ## 4. Mục mở
 
-- Tên "Tiếng Việt" trong danh sách ngôn ngữ chưa được xác minh (có thể là "VI").
 - Font, dấu và độ rộng nút chưa thử trong game.
 - 27 key nguồn chưa phục hồi → fallback tiếng Anh (kế hoạch runtime-key-recovery riêng).
-- Ngoài 111 key Phase 1, 1.693 key còn draft và 7 key `blocked`.
-- Phase 1 chỉ là preview, không phải bản Việt hóa đầy đủ.
+- Ngoài 263 key Phase 1/1.5, 1.541 key còn draft và 7 key `blocked`.
+- Phase 1.5 là preview mở rộng vòng chơi cốt lõi, chưa phải bản Việt hóa đầy đủ.
+- Nội dung còn tiếng Anh dễ gặp khi chơi sâu: tên/mô tả công trình (BU_*), nâng cấp
+  (UPG_*, *_IMPROVEMENT_*), chính sách chi tiết (POLICY_*), nhiệm vụ (QUEST_*),
+  thành tựu, vật phẩm cửa hàng, địa danh và cốt truyện.

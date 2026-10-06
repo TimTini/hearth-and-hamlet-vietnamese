@@ -272,3 +272,21 @@ chưa phục hồi fallback tiếng Anh.
 - PCK sau apply: B04247D059A8B4CEC654211179CBEB42A27FDF7CD7B5B548A29C47A6EDB593D8 (khớp artifact)
 - Backup gốc: %LOCALAPPDATA%\HearthAndHamletVietnamese\backups\25600292\<UTC timestamp>
 - Chưa launch game / smoke UI trong session này.
+
+## Phase 1.5 + locale label — 2026-10-06
+
+- Root cause of language picker "VI": `Scenes/language.gd` `native_names` had no
+  `vi` entry, so UI used `locale.to_upper()`. Build now injects
+  `"vi": "Tiếng Việt"`, compiles bytecode 4.5.0, and patches
+  `res://Scenes/language.gdc` (verified by decompile of candidate).
+- Expanded selected keys 111 → 263 (Phase 1.5): tutorials, BI_ HUD tabs, build menu,
+  battle/trade/research notes, military/trade/shop labels, happiness/workers, early
+  building names, demo/end labels. Status: 263 reviewed, 7 blocked, 1541 draft.
+- Validate: 0 errors, 8 known duplicate warnings, 0 glossary mismatches.
+- Pytest: 417 passed, 2 skipped (symlink privileges).
+- Rebuild preview: SHA-256 `964A7183BF54A9400FFA7D9A1031F31A108AA0478E59DDE6A8F588548B555056`,
+  translated_keys=263, patched_paths include language.gdc + vi.translation + project.binary.
+- Uninstalled previous preview, then dry-run + `-Apply` install to GameDir.
+  Game PCK now `964A7183…5056`; backup under
+  `%LOCALAPPDATA%\HearthAndHamletVietnamese\backups\25600292\20261006T052741836427Z`.
+- Still need in-game smoke: Tiếng Việt label, Vietnamese menus/tutorial, fonts/layout.
