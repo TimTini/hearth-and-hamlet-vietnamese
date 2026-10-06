@@ -97,7 +97,11 @@ VI_TEXT = {
     "fixture_case": "khóa thường",
     "fixture_nfc": NFD_TEXT,
     "fixture_vi_missing": "",
+    "fixture_escape": "Dong mot\\nDong hai",
+    "fixture_not_in_game": "Khong co trong game",
 }
+# A recovered key that the packed game resources do not contain, so GDRE cannot patch it.
+GHOST_KEY = "fixture_not_in_game"
 
 
 @dataclass(frozen=True)
@@ -131,7 +135,9 @@ def pack_game(project: Path, pck_path: Path, extra_files: tuple[str, ...] = ()) 
     ], check=True, capture_output=True)
 
 
-def make_preview_repo(tmp_path: Path, extra_files: tuple[str, ...] = ()) -> PreviewRepo:
+def make_preview_repo(
+    tmp_path: Path, extra_files: tuple[str, ...] = (), with_ghost_key: bool = False,
+) -> PreviewRepo:
     if not GODOT.is_file() or not GDRE.is_file():
         pytest.skip("Run scripts/bootstrap.ps1 before synthetic tool integration")
     repo, game = tmp_path / "Repo with spaces", tmp_path / "Game with spaces"
@@ -159,13 +165,17 @@ def make_preview_repo(tmp_path: Path, extra_files: tuple[str, ...] = ()) -> Prev
     }]}), encoding="utf-8")
     shutil.copyfile(ROOT / "manifests/tools.json", repo / "manifests/tools.json")
     shutil.copytree(ROOT / ".tools", repo / ".tools")
-    write_dataset(repo, project, pck_path)
+    write_dataset(repo, project, pck_path, with_ghost_key)
     return PreviewRepo(repo, game, project)
 
 
-def write_dataset(repo: Path, project: Path, pck_path: Path) -> None:
+def write_dataset(repo: Path, project: Path, pck_path: Path, with_ghost_key: bool) -> None:
     """Write the recovered source (with a marker and a duplicate) and the Vietnamese files."""
     source_rows = read_csv_rows(project / "localisation/translations.csv")
+    selected_keys = list(SELECTED_KEYS)
+    if with_ghost_key:
+        source_rows.append({"key": GHOST_KEY, "en": "Not in the game", "fr": "Absent"})
+        selected_keys.append(GHOST_KEY)
     rows = [[row["key"], row["en"], row["fr"]] for row in source_rows]
     rows.insert(0, ["<!MissingKey:synthetic marker>", "Marker text", "Marqueur"])
     rows.append(["fixture_button", "Sample button", "Bouton exemple"])
@@ -193,7 +203,7 @@ def write_dataset(repo: Path, project: Path, pck_path: Path) -> None:
         [key, "draft" if key == "fixture_vi_missing" else "reviewed", ""] for key in unique_keys
     ])
     write_csv(localization / "glossary.csv", ["source_term", "translation_vi", "scope", "note"], [])
-    (localization / "phase1.keys").write_text("\n".join(SELECTED_KEYS) + "\n", encoding="utf-8")
+    (localization / "phase1.keys").write_text("\n".join(selected_keys) + "\n", encoding="utf-8")
 
 
 def run_build(preview: PreviewRepo) -> subprocess.CompletedProcess[str]:
@@ -263,7 +273,7 @@ def test_build_script_publishes_verified_preview_and_leaves_game_unchanged(built
     assert metadata["coverage"]["selected_keys"] == len(SELECTED_KEYS)
     assert metadata["coverage"]["selected_ready_ratio"] == 1.0
     assert metadata["coverage"]["maximum_known_source_ratio"] < 1.0
-    assert metadata["translated_keys"] == 7
+    assert metadata["translated_keys"] == 8
     assert metadata["omitted_empty_keys"] == 1
 
 
@@ -293,7 +303,7 @@ def test_godot_uses_vi_messages_and_falls_back_to_english(built_preview) -> None
     artifact_pck = preview.repo / "dist/fixture" / ARTIFACT_NAME
     keys = [
         "fixture_button", "fixture_vi_missing", "fixture_Case", "fixture_case",
-        "fixture_placeholder", "fixture_multiline", "fixture_nfc",
+        "fixture_placeholder", "fixture_multiline", "fixture_nfc", "fixture_escape",
     ]
 
     locales, vi_text = translate_in_godot(artifact_pck, tmp_path, "vi", keys)
@@ -307,6 +317,8 @@ def test_godot_uses_vi_messages_and_falls_back_to_english(built_preview) -> None
     assert vi_text["fixture_placeholder"] == "Xin chào %s"
     assert vi_text["fixture_multiline"] == "Dòng một\nDòng hai"
     assert vi_text["fixture_nfc"] == NFD_NFC_TEXT  # NFC in the generated resource only
+    # A literal backslash-n may come back as a real newline after GDRE's CSV import.
+    assert vi_text["fixture_escape"] in ("Dong mot\\nDong hai", "Dong mot\nDong hai")
     assert fr_text["fixture_button"] == "Bouton exemple"
     committed = (preview.repo / "localization/translations.vi.csv").read_text(encoding="utf-8")
     assert NFD_TEXT in committed
@@ -375,14 +387,29 @@ def test_source_csv_drift_blocks_build(built_preview) -> None:
     assert game_fingerprint(preview.game) == before_game
 
 
-def test_diagnostic_files_in_game_pck_block_build(tmp_path: Path) -> None:
-    preview = make_preview_repo(tmp_path, extra_files=("res://diagnostics/runtime-key-probe.gd",))
+def test_original_game_files_with_diagnostic_like_names_do_not_block_build(tmp_path: Path) -> None:
+    # Only files the candidate adds are judged; original game assets may have any name.
+    preview = make_preview_repo(tmp_path, extra_files=("res://diagnostics/original-asset.log",))
+    before_game = game_fingerprint(preview.game)
+
+    result = run_build(preview)
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    dist = preview.repo / "dist/fixture"
+    artifact = verify_build_artifact(dist / ARTIFACT_NAME, dist / METADATA_NAME)
+    assert artifact.metadata["patched_paths"] == [VI_TRANSLATION_PATH, PROJECT_BINARY_PATH]
+    assert game_fingerprint(preview.game) == before_game
+
+
+def test_translated_key_missing_from_game_resources_blocks_build(tmp_path: Path) -> None:
+    # GDRE accepts the CSV but silently ignores a key the game's resources do not contain.
+    preview = make_preview_repo(tmp_path, with_ghost_key=True)
     before_game = game_fingerprint(preview.game)
 
     blocked = run_build(preview)
 
     assert blocked.returncode != 0
-    assert "diagnostic_path_in_source" in blocked.stdout + blocked.stderr
+    assert "vi_messages_missing: 1 translated keys" in blocked.stdout + blocked.stderr
     assert not (preview.repo / "dist").exists()
     assert sorted(path.name for path in (preview.repo / "workspace/fixture").iterdir()) == ["probe"]
     assert game_fingerprint(preview.game) == before_game

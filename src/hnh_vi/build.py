@@ -53,6 +53,7 @@ ALLOWED_PATCHED_PATHS = frozenset({VI_TRANSLATION_PATH, PROJECT_BINARY_PATH})
 DIAGNOSTIC_PATH_PARTS = ("diagnostic", "runtime-key", "runtime_key", "key-recovery", "instrument")
 DIAGNOSTIC_PATH_SUFFIXES = (".log", ".jsonl")
 GDRE_TIMEOUT_SECONDS = 1800
+GODOT_CHECK_TIMEOUT_SECONDS = 300
 METADATA_SCHEMA_VERSION = 1
 ARTIFACT_KIND = "translation_patch"
 
@@ -194,8 +195,8 @@ def check_candidate_paths(source_paths: list[str], candidate_paths: list[str]) -
     source_set, candidate_set = set(source_paths), set(candidate_paths)
     if ENGLISH_TRANSLATION_PATH not in source_set:
         raise ValueError("english_missing_from_source: fallback resource is not in the game PCK")
-    if any(_is_diagnostic_path(path) for path in source_set):
-        raise ValueError("diagnostic_path_in_source: source PCK contains diagnostic files")
+    # Only paths the candidate ADDS are judged for diagnostics. Original game assets may have
+    # any name, so judging them could block every real build.
 
     removed = source_set - candidate_set
     if ENGLISH_TRANSLATION_PATH in removed:
@@ -407,6 +408,79 @@ def _check_patched_paths(changed_paths: tuple[str, ...]) -> None:
         raise ValueError("locale_not_registered: GDRE did not update the vi resource and locale list")
 
 
+CHECK_VI_MESSAGES_SCRIPT = """extends SceneTree
+
+
+func _initialize() -> void:
+	var arguments := OS.get_cmdline_user_args()
+	var expected_file := FileAccess.open(arguments[0], FileAccess.READ)
+	if expected_file == null:
+		print("ERROR|expected_file_unreadable")
+		quit(1)
+		return
+	var expected: Array = JSON.parse_string(expected_file.get_as_text())
+	var translation := TranslationServer.get_translation_object("vi")
+	if translation == null or translation.locale != "vi":
+		print("ERROR|vi_locale_not_loaded")
+		quit(1)
+		return
+	var missing_rows := PackedStringArray()
+	for index in range(expected.size()):
+		var key: String = expected[index][0]
+		var expected_text: String = expected[index][1]
+		# Ask the vi resource itself, so an English fallback cannot hide a missing key.
+		var actual_text := String(translation.get_message(key))
+		# GDRE may turn a literal backslash-n into a real newline when it imports the CSV.
+		if actual_text != expected_text and actual_text != expected_text.c_unescape():
+			missing_rows.append(str(index + 1))
+	print("CHECKED|", expected.size())
+	print("MISSING|", ",".join(missing_rows))
+	quit(0)
+"""
+
+
+def _check_vi_messages_in_candidate(
+    godot: Path, candidate: Path, build_input: BuildInput, temp_dir: Path,
+) -> None:
+    """Ask pinned Godot whether every translated key has its message in the candidate's vi."""
+    with build_input.merged_csv_path.open(encoding="utf-8", newline="") as stream:
+        reader = csv.reader(stream)
+        next(reader)
+        expected_messages = [[key, text] for key, text in reader]
+    if len(expected_messages) != build_input.translated_keys:
+        raise ValueError("vi_messages_missing: merged CSV does not match the translated key count")
+
+    expected_path = temp_dir / "expected-vi-messages.json"
+    script_path = temp_dir / "check_vi_messages.gd"
+    expected_path.write_text(json.dumps(expected_messages), encoding="utf-8")
+    script_path.write_text(CHECK_VI_MESSAGES_SCRIPT, encoding="utf-8")
+    try:
+        result = subprocess.run(
+            [str(godot), "--headless", "--main-pack", str(candidate), "--script", str(script_path),
+             "--", str(expected_path)],
+            cwd=temp_dir, capture_output=True, text=True, encoding="utf-8", errors="replace",
+            timeout=GODOT_CHECK_TIMEOUT_SECONDS, check=False,
+        )
+    except subprocess.TimeoutExpired:
+        raise ValueError("godot_check_timeout: Godot did not finish checking the candidate") from None
+    output_lines = result.stdout.splitlines()
+    error_lines = [line for line in output_lines if line.startswith("ERROR|")]
+    if result.returncode != 0 or error_lines:
+        reason = error_lines[0].removeprefix("ERROR|") if error_lines else f"exit {result.returncode}"
+        raise ValueError(f"godot_check_failed: {reason}")
+
+    checked = [line.removeprefix("CHECKED|") for line in output_lines if line.startswith("CHECKED|")]
+    missing = [line.removeprefix("MISSING|") for line in output_lines if line.startswith("MISSING|")]
+    if checked != [str(len(expected_messages))] or len(missing) != 1:
+        raise ValueError("godot_check_failed: unexpected Godot output")
+    if missing[0]:
+        row_numbers = missing[0].split(",")
+        raise ValueError(
+            f"vi_messages_missing: {len(row_numbers)} translated keys are not in the candidate "
+            f"vi resource (merged CSV rows {', '.join(row_numbers[:10])})"
+        )
+
+
 def _publish_file(source: Path, destination: Path) -> None:
     """Copy into a fresh temp file beside the destination, then replace it atomically."""
     for entry in (destination, *destination.parents):
@@ -507,6 +581,10 @@ def build_preview(repo_root: Path, game_dir: Path) -> BuildArtifact:
         _extract_patchable_files(gdre, candidate, temp_dir / "candidate-files", temp_dir)
         patched_paths = _find_changed_paths(temp_dir / "source-files", temp_dir / "candidate-files")
         _check_patched_paths(patched_paths)
+        # GDRE silently ignores vi keys that the game's resources do not contain.
+        _check_vi_messages_in_candidate(
+            Path(context["godot"]), candidate, build_input, temp_dir,
+        )
 
         metadata = make_preview_metadata(
             game_version=spec.exe_version,

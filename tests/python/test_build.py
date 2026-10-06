@@ -328,6 +328,12 @@ SOURCE_PATHS = [
 ]
 
 
+def test_original_game_paths_are_never_judged_as_diagnostics() -> None:
+    source_paths = SOURCE_PATHS + ["res://logs/runtime.log", "res://instrument_panel/diagnostic_icon.png"]
+    added = check_candidate_paths(source_paths, source_paths + [VI_TRANSLATION_PATH])
+    assert added == (VI_TRANSLATION_PATH,)
+
+
 def test_candidate_must_only_add_the_vi_resource() -> None:
     added = check_candidate_paths(SOURCE_PATHS, SOURCE_PATHS + [VI_TRANSLATION_PATH])
     assert added == (VI_TRANSLATION_PATH,)
@@ -335,7 +341,7 @@ def test_candidate_must_only_add_the_vi_resource() -> None:
 
 @pytest.mark.parametrize("problem", [
     "english_missing_from_source", "english_removed", "path_removed", "unexpected_path_added",
-    "diagnostic_path_added", "vi_resource_missing", "diagnostic_path_in_source",
+    "diagnostic_path_added", "vi_resource_missing",
 ])
 def test_candidate_path_check_rejects_unsafe_pck_contents(problem: str) -> None:
     source_paths = list(SOURCE_PATHS)
@@ -351,11 +357,8 @@ def test_candidate_path_check_rejects_unsafe_pck_contents(problem: str) -> None:
         candidate_paths.append("res://extra/new_script.gd")
     elif problem == "diagnostic_path_added":
         candidate_paths.append("res://diagnostics/runtime-key-probe.gd")
-    elif problem == "vi_resource_missing":
-        candidate_paths.remove(VI_TRANSLATION_PATH)
     else:
-        source_paths.append("res://logs/runtime.log")
-        candidate_paths.append("res://logs/runtime.log")
+        candidate_paths.remove(VI_TRANSLATION_PATH)
 
     with pytest.raises(ValueError, match=problem):
         check_candidate_paths(source_paths, candidate_paths)

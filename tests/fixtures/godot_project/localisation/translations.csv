@@ -9,3 +9,4 @@ deuxieme ligne"
 fixture_Case,Upper case key,Cle majuscule
 fixture_case,Lower case key,Cle minuscule
 fixture_nfc,Needs NFC,Besoin NFC
+fixture_escape,Line one\nLine two,Ligne un\ndeux
