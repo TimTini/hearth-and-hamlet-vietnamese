@@ -145,3 +145,13 @@ Audit read-only cho snapshot hiện tại: `1.849` row tổng, `27` row
 hoặc tạo diagnostic artifact tại checkpoint này. Sau đó người dùng đã duyệt
 hai spec, giao agent tự quyết chi tiết kế hoạch và yêu cầu bắt đầu dịch bằng
 phương thức subagent-driven.
+
+Hai implementation plan mới đã được viết theo thứ tự agent tự chốt:
+
+1. `docs/superpowers/plans/2026-10-06-partial-source-preview.md` — hoàn thiện
+   pipeline và dịch Phase 1 trước, dừng ở real install dry-run.
+2. `docs/superpowers/plans/2026-10-06-runtime-key-recovery.md` — offline hints,
+   synthetic diagnostic và real diagnostic dry-run sau khi preview pipeline ổn.
+
+Tasks 4–9 của plan ngày 2026-10-05 được đánh dấu superseded để không bị chạy
+nhầm. Chưa có `-Apply` hoặc game launch nào được thực hiện.

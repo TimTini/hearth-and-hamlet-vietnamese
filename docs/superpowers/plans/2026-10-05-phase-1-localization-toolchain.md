@@ -1,5 +1,10 @@
 # Phase 1 Localization Toolchain Implementation Plan
 
+> **Execution update, 2026-10-06:** Tasks 1–3 are retained as completed.
+> Tasks 4–9 are superseded and must not be executed from this file. Continue
+> with `2026-10-06-partial-source-preview.md`, then
+> `2026-10-06-runtime-key-recovery.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Tạo toolchain đã kiểm thử và bản Việt hóa thử Đợt 1 cho Hearth and Hamlet 1.1.0, gồm giao diện cơ bản, build PCK ứng viên, cài/gỡ có backup và bằng chứng smoke test.
