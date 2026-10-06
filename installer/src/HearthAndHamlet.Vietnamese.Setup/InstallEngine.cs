@@ -3,13 +3,20 @@ using System.Text.Json;
 
 namespace HearthAndHamlet.Vietnamese.Setup;
 
+public interface IInstallFileMover
+{
+    void Move(string source, string destination);
+}
+
 public sealed class InstallEngine
 {
     private readonly InstallFingerprints _fingerprints;
+    private readonly IInstallFileMover _fileMover;
 
-    public InstallEngine(InstallFingerprints? fingerprints = null)
+    public InstallEngine(InstallFingerprints? fingerprints = null, IInstallFileMover? fileMover = null)
     {
         _fingerprints = fingerprints ?? ReleaseConstants.Fingerprints;
+        _fileMover = fileMover ?? new PhysicalInstallFileMover();
     }
 
     public async Task<InstallResult> InstallAsync(
@@ -27,7 +34,7 @@ public sealed class InstallEngine
         string? backupDirectory = null;
         string? stagedPath = null;
         string? rollbackPath = null;
-        var replaced = false;
+        var recoveryRequired = false;
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -71,13 +78,24 @@ public sealed class InstallEngine
 
             rollbackPath = CreateTemporaryPath(game.GameDirectory, ".hnh-vi-rollback-");
             ReplaceWithRollback(game.Pck, stagedPath, rollbackPath);
-            replaced = true;
             stagedPath = null;
             var installedHash = await HashFileAsync(game.Pck, cancellationToken);
             if (!HashEquals(installedHash, _fingerprints.TranslatedPckSha256))
             {
-                RestoreRollback(game.Pck, rollbackPath);
-                replaced = false;
+                try
+                {
+                    RestoreRollback(game.Pck, rollbackPath);
+                    rollbackPath = null;
+                }
+                catch (Exception exception)
+                {
+                    recoveryRequired = true;
+                    return Failure(
+                        "recovery_required",
+                        $"Không thể rollback an toàn ({exception.Message}). Giữ file rollback và backup; cần phục hồi thủ công: {rollbackPath}",
+                        backupDirectory,
+                        installedHash);
+                }
                 return Failure("verification_failed", "Hash sau khi thay PCK không khớp; đã rollback.");
             }
 
@@ -88,6 +106,11 @@ public sealed class InstallEngine
         catch (OperationCanceledException)
         {
             return Failure("cancelled", "Thao tác đã bị hủy.");
+        }
+        catch (RecoveryRequiredException exception)
+        {
+            recoveryRequired = true;
+            return Failure("recovery_required", exception.Message, backupDirectory);
         }
         catch (FileNotFoundException exception)
         {
@@ -104,17 +127,13 @@ public sealed class InstallEngine
         finally
         {
             exeLock?.Dispose();
-            DeleteIfExists(stagedPath);
-            if (rollbackPath is not null)
+            if (!recoveryRequired)
             {
-                if (replaced)
-                {
-                    try { RestoreRollback(game.Pck, rollbackPath); } catch { }
-                }
+                DeleteIfExists(stagedPath);
                 DeleteIfExists(rollbackPath);
             }
             // A failed install must not leave an apparently usable backup behind.
-            if (backupDirectory is not null && (!File.Exists(game.Pck) || !IsTranslated(game.Pck)))
+            if (!recoveryRequired && backupDirectory is not null && (!File.Exists(game.Pck) || !IsTranslated(game.Pck)))
                 CleanupFailedBackup(backupDirectory, backupRoot);
         }
     }
@@ -131,7 +150,7 @@ public sealed class InstallEngine
         FileStream? exeLock = null;
         string? stagedPath = null;
         string? rollbackPath = null;
-        var replaced = false;
+        var recoveryRequired = false;
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -158,13 +177,24 @@ public sealed class InstallEngine
 
             rollbackPath = CreateTemporaryPath(game.GameDirectory, ".hnh-vi-rollback-");
             ReplaceWithRollback(game.Pck, stagedPath, rollbackPath);
-            replaced = true;
             stagedPath = null;
             var restoredHash = await HashFileAsync(game.Pck, cancellationToken);
             if (!HashEquals(restoredHash, _fingerprints.OriginalPckSha256))
             {
-                RestoreRollback(game.Pck, rollbackPath);
-                replaced = false;
+                try
+                {
+                    RestoreRollback(game.Pck, rollbackPath);
+                    rollbackPath = null;
+                }
+                catch (Exception exception)
+                {
+                    recoveryRequired = true;
+                    return Failure(
+                        "recovery_required",
+                        $"Không thể rollback an toàn ({exception.Message}). Giữ file rollback để phục hồi thủ công: {rollbackPath}",
+                        backup.Directory,
+                        restoredHash);
+                }
                 return Failure("verification_failed", "Hash sau khi phục hồi không khớp; đã rollback.");
             }
 
@@ -175,6 +205,11 @@ public sealed class InstallEngine
         catch (OperationCanceledException)
         {
             return Failure("cancelled", "Thao tác đã bị hủy.");
+        }
+        catch (RecoveryRequiredException exception)
+        {
+            recoveryRequired = true;
+            return Failure("recovery_required", exception.Message);
         }
         catch (FileNotFoundException exception)
         {
@@ -191,13 +226,9 @@ public sealed class InstallEngine
         finally
         {
             exeLock?.Dispose();
-            DeleteIfExists(stagedPath);
-            if (rollbackPath is not null)
+            if (!recoveryRequired)
             {
-                if (replaced)
-                {
-                    try { RestoreRollback(game.Pck, rollbackPath); } catch { }
-                }
+                DeleteIfExists(stagedPath);
                 DeleteIfExists(rollbackPath);
             }
         }
@@ -273,25 +304,44 @@ public sealed class InstallEngine
     private static string CreateTemporaryPath(string directory, string prefix) =>
         Path.Combine(directory, prefix + Guid.NewGuid().ToString("N") + ".tmp");
 
-    private static void ReplaceWithRollback(string current, string staged, string rollback)
+    private void ReplaceWithRollback(string current, string staged, string rollback)
     {
-        File.Move(current, rollback);
+        _fileMover.Move(current, rollback);
         try
         {
-            File.Move(staged, current);
+            _fileMover.Move(staged, current);
         }
         catch
         {
-            if (!File.Exists(current) && File.Exists(rollback))
-                File.Move(rollback, current);
+            try
+            {
+                if (!File.Exists(current) && File.Exists(rollback))
+                {
+                    _fileMover.Move(rollback, current);
+                    if (!File.Exists(current) || File.Exists(rollback))
+                        throw new IOException("The rollback move did not produce a single recoverable file.");
+                }
+                else if (File.Exists(current))
+                    throw new IOException("The replacement state is ambiguous.");
+                else
+                    throw new IOException("Neither the current file nor the rollback file is available.");
+            }
+            catch (Exception recoveryException)
+            {
+                throw new RecoveryRequiredException(
+                    $"Không thể thay PCK và không thể phục hồi tự động ({recoveryException.Message}). Giữ rollback để phục hồi thủ công: {rollback}",
+                    recoveryException);
+            }
             throw;
         }
     }
 
-    private static void RestoreRollback(string current, string rollback)
+    private void RestoreRollback(string current, string rollback)
     {
         DeleteIfExists(current);
-        File.Move(rollback, current);
+        _fileMover.Move(rollback, current);
+        if (!File.Exists(current) || File.Exists(rollback))
+            throw new IOException("The rollback move did not produce a single recoverable file.");
     }
 
     private static async Task<string> HashFileAsync(string path, CancellationToken cancellationToken)
@@ -315,7 +365,8 @@ public sealed class InstallEngine
     private static bool HashEquals(string? actual, string expected) =>
         actual is not null && string.Equals(actual, expected, StringComparison.OrdinalIgnoreCase);
 
-    private static InstallResult Failure(string code, string message) => new(false, code, message);
+    private static InstallResult Failure(string code, string message, string? backupDirectory = null, string? targetHash = null) =>
+        new(false, code, message, backupDirectory, targetHash);
 
     private static void DeleteIfExists(string? path)
     {
@@ -354,4 +405,11 @@ public sealed class InstallEngine
     }
 
     private sealed record BackupInfo(string Directory, string PckPath);
+
+    private sealed class RecoveryRequiredException(string message, Exception innerException) : IOException(message, innerException);
+
+    private sealed class PhysicalInstallFileMover : IInstallFileMover
+    {
+        public void Move(string source, string destination) => File.Move(source, destination);
+    }
 }

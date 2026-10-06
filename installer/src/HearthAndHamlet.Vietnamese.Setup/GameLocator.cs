@@ -1,15 +1,11 @@
 using System.Text;
-using System.Text.RegularExpressions;
+using System.Globalization;
 using Microsoft.Win32;
 
 namespace HearthAndHamlet.Vietnamese.Setup;
 
 public static class GameLocator
 {
-    private static readonly Regex PathEntryRegex = new(
-        "\\\"path\\\"\\s+\\\"(?<path>(?:\\\\.|[^\\\"\\\\])*)\\\"",
-        RegexOptions.Compiled | RegexOptions.CultureInvariant);
-
     public static IEnumerable<string> FindCandidates(
         string executableDirectory,
         string currentDirectory,
@@ -160,46 +156,175 @@ public static class GameLocator
             yield break;
         }
 
-        if (!IsBalancedVdf(text))
+        foreach (var path in ParseLibraryPaths(text))
+            yield return path;
+    }
+
+    private static IEnumerable<string> ParseLibraryPaths(string text)
+    {
+        if (text.Length > 0 && text[0] == '\uFEFF')
+            text = text[1..];
+        if (!TryTokenize(text, out var tokens))
             yield break;
 
-        foreach (Match match in PathEntryRegex.Matches(text))
+        var position = 0;
+        if (!ReadString(tokens, ref position, "libraryfolders") || !ReadToken(tokens, ref position, VdfTokenKind.Open))
+            yield break;
+
+        var paths = new List<string>();
+        while (position < tokens.Count && tokens[position].Kind != VdfTokenKind.Close)
         {
-            var path = match.Groups["path"].Value
-                .Replace("\\\\", "\\", StringComparison.Ordinal)
-                .Replace("\\\"", "\"", StringComparison.Ordinal);
-            if (!string.IsNullOrWhiteSpace(path))
-                yield return path;
+            if (!ReadString(tokens, ref position, out var index) ||
+                !int.TryParse(index, NumberStyles.None, CultureInfo.InvariantCulture, out var libraryIndex) ||
+                libraryIndex < 0)
+                yield break;
+            if (!ReadToken(tokens, ref position, VdfTokenKind.Open))
+                yield break;
+
+            string? path = null;
+            while (position < tokens.Count && tokens[position].Kind != VdfTokenKind.Close)
+            {
+                if (!ReadString(tokens, ref position, out var fieldName))
+                    yield break;
+                if (position >= tokens.Count)
+                    yield break;
+                if (tokens[position].Kind == VdfTokenKind.String)
+                {
+                    var value = tokens[position++].Value;
+                    if (string.Equals(fieldName, "path", StringComparison.OrdinalIgnoreCase))
+                        path = value;
+                }
+                else if (tokens[position].Kind == VdfTokenKind.Open)
+                {
+                    if (!SkipObject(tokens, ref position))
+                        yield break;
+                }
+                else
+                {
+                    yield break;
+                }
+            }
+            if (!ReadToken(tokens, ref position, VdfTokenKind.Close))
+                yield break;
+            if (!string.IsNullOrWhiteSpace(path) && Path.IsPathFullyQualified(path))
+                paths.Add(path);
         }
+
+        if (!ReadToken(tokens, ref position, VdfTokenKind.Close) || position != tokens.Count)
+            yield break;
+        foreach (var path in paths)
+            yield return path;
     }
 
-    private static bool IsBalancedVdf(string text)
+    private static bool TryTokenize(string text, out List<VdfToken> tokens)
     {
-        var braces = 0;
-        var quoted = false;
-        var escaped = false;
-        foreach (var character in text)
+        tokens = [];
+        for (var index = 0; index < text.Length; index++)
         {
-            if (escaped)
+            var character = text[index];
+            if (char.IsWhiteSpace(character))
+                continue;
+            if (character == '{')
             {
-                escaped = false;
+                tokens.Add(new VdfToken(VdfTokenKind.Open, string.Empty));
                 continue;
             }
-            if (quoted && character == '\\')
+            if (character == '}')
             {
-                escaped = true;
+                tokens.Add(new VdfToken(VdfTokenKind.Close, string.Empty));
                 continue;
             }
-            if (character == '\"')
+            if (character != '"')
+                return false;
+
+            var value = new StringBuilder();
+            var closed = false;
+            var escaped = false;
+            for (index++; index < text.Length; index++)
             {
-                quoted = !quoted;
-                continue;
+                character = text[index];
+                if (escaped)
+                {
+                    value.Append(character switch
+                    {
+                        '"' => '"',
+                        '\\' => '\\',
+                        'n' => '\n',
+                        'r' => '\r',
+                        't' => '\t',
+                        _ => character
+                    });
+                    escaped = false;
+                }
+                else if (character == '\\')
+                {
+                    escaped = true;
+                }
+                else if (character == '"')
+                {
+                    closed = true;
+                    break;
+                }
+                else
+                {
+                    value.Append(character);
+                }
             }
-            if (quoted)
-                continue;
-            if (character == '{') braces++;
-            if (character == '}' && --braces < 0) return false;
+            if (!closed || escaped)
+                return false;
+            tokens.Add(new VdfToken(VdfTokenKind.String, value.ToString()));
         }
-        return !quoted && braces == 0;
+        return true;
     }
+
+    private static bool SkipObject(IReadOnlyList<VdfToken> tokens, ref int position)
+    {
+        if (!ReadToken(tokens, ref position, VdfTokenKind.Open))
+            return false;
+        while (position < tokens.Count && tokens[position].Kind != VdfTokenKind.Close)
+        {
+            if (!ReadString(tokens, ref position, out _))
+                return false;
+            if (position >= tokens.Count)
+                return false;
+            if (tokens[position].Kind == VdfTokenKind.String)
+                position++;
+            else if (tokens[position].Kind == VdfTokenKind.Open && !SkipObject(tokens, ref position))
+                return false;
+            else if (tokens[position].Kind != VdfTokenKind.Open)
+                return false;
+        }
+        return ReadToken(tokens, ref position, VdfTokenKind.Close);
+    }
+
+    private static bool ReadString(IReadOnlyList<VdfToken> tokens, ref int position, string expected)
+    {
+        return ReadString(tokens, ref position, out var value) &&
+            string.Equals(value, expected, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool ReadString(IReadOnlyList<VdfToken> tokens, ref int position, out string value)
+    {
+        if (position < tokens.Count && tokens[position].Kind == VdfTokenKind.String)
+        {
+            value = tokens[position++].Value;
+            return true;
+        }
+        value = string.Empty;
+        return false;
+    }
+
+    private static bool ReadToken(IReadOnlyList<VdfToken> tokens, ref int position, VdfTokenKind expected)
+    {
+        if (position < tokens.Count && tokens[position].Kind == expected)
+        {
+            position++;
+            return true;
+        }
+        return false;
+    }
+
+    private enum VdfTokenKind { String, Open, Close }
+
+    private readonly record struct VdfToken(VdfTokenKind Kind, string Value);
 }

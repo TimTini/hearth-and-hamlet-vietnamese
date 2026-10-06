@@ -57,6 +57,25 @@ public sealed class GameLocatorTests
         Assert.Empty(candidates);
     }
 
+    [Fact]
+    public void FindCandidates_rejects_balanced_vdf_with_non_library_structure()
+    {
+        using var fixture = new TempDirectory();
+        var steamRoot = fixture.CreateDirectory("Steam");
+        var library = fixture.CreateDirectory("Valid Library");
+        var game = fixture.CreateDirectory("Valid Library", "steamapps", "common", "Hearth and Hamlet");
+        File.WriteAllText(Path.Combine(game, "Hearth and Hamlet.exe"), "exe");
+        File.WriteAllText(Path.Combine(game, "Hearth and Hamlet.pck"), "pck");
+        var vdfPath = Path.Combine(steamRoot, "steamapps", "libraryfolders.vdf");
+        Directory.CreateDirectory(Path.GetDirectoryName(vdfPath)!);
+        File.WriteAllText(vdfPath,
+            $"\"libraryfolders\" {{\n  \"0\" {{ \"path\" \"{library.Replace("\\", "\\\\")}\" }}\n  \"not-a-library-index\" {{ \"path\" \"{library.Replace("\\", "\\\\")}\" }}\n}}\n");
+
+        var candidates = GameLocator.FindCandidates("", "", [steamRoot]).ToArray();
+
+        Assert.Empty(candidates);
+    }
+
     private sealed class TempDirectory : IDisposable
     {
         private readonly string _path = Path.Combine(Path.GetTempPath(), "hnh-setup-tests", Guid.NewGuid().ToString("N"));

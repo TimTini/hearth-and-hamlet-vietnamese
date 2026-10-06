@@ -99,6 +99,49 @@ public sealed class InstallEngineTests
     }
 
     [Fact]
+    public async Task InstallAsync_preserves_recovery_files_when_move_back_fails()
+    {
+        using var fixture = new GameFixture("original");
+        var result = await new InstallEngine(fixture.Fingerprints, new FailRecoveryMove()).InstallAsync(
+            fixture.Game,
+            fixture.BackupRoot,
+            new WritingPatcher("translated"),
+            CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.Equal("recovery_required", result.Code);
+        Assert.Contains("thủ công", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.NotNull(result.BackupDirectory);
+        Assert.True(Directory.Exists(result.BackupDirectory));
+        Assert.NotEmpty(Directory.EnumerateFiles(fixture.Game.GameDirectory, ".hnh-vi-rollback-*.tmp"));
+        Assert.False(File.Exists(fixture.Game.PckPath));
+    }
+
+    [Fact]
+    public async Task RestoreAsync_preserves_recovery_files_when_move_back_fails()
+    {
+        using var fixture = new GameFixture("original");
+        var install = await new InstallEngine(fixture.Fingerprints).InstallAsync(
+            fixture.Game,
+            fixture.BackupRoot,
+            new WritingPatcher("translated"),
+            CancellationToken.None);
+        Assert.True(install.Success, install.Message);
+
+        var result = await new InstallEngine(fixture.Fingerprints, new FailRecoveryMove()).RestoreAsync(
+            fixture.Game,
+            fixture.BackupRoot,
+            CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.Equal("recovery_required", result.Code);
+        Assert.Contains("thủ công", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.True(Directory.Exists(install.BackupDirectory));
+        Assert.NotEmpty(Directory.EnumerateFiles(fixture.Game.GameDirectory, ".hnh-vi-rollback-*.tmp"));
+        Assert.False(File.Exists(fixture.Game.PckPath));
+    }
+
+    [Fact]
     public async Task InstallAsync_reports_unwritable_destination_without_mutation()
     {
         using var fixture = new GameFixture("original");
@@ -139,6 +182,19 @@ public sealed class InstallEngineTests
             Task.FromException(new InvalidOperationException("synthetic patch failure"));
     }
 
+    private sealed class FailRecoveryMove : IInstallFileMover
+    {
+        private int _moveCount;
+
+        public void Move(string source, string destination)
+        {
+            _moveCount++;
+            if (_moveCount >= 2)
+                throw new IOException("synthetic move-back failure");
+            File.Move(source, destination);
+        }
+    }
+
     private sealed class GameFixture : IDisposable
     {
         private readonly string _root = Path.Combine(Path.GetTempPath(), "hnh-setup-engine-tests", Guid.NewGuid().ToString("N"));
@@ -164,7 +220,8 @@ public sealed class InstallEngineTests
         {
             if (Directory.Exists(_root))
             {
-                File.SetAttributes(Game.PckPath, FileAttributes.Normal);
+                if (File.Exists(Game.PckPath))
+                    File.SetAttributes(Game.PckPath, FileAttributes.Normal);
                 Directory.Delete(_root, recursive: true);
             }
         }
