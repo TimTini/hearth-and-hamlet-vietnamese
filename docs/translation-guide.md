@@ -69,9 +69,16 @@ nếu quy tắc áp dụng cho mọi key, hoặc ghi đúng tên key nếu chỉ
 Thuật ngữ được so khớp theo từ nguyên vẹn, không phân biệt hoa/thường; dạng số
 nhiều như "enemies" không khớp "Enemy", nên cần nhớ tự giữ nhất quán.
 
-## Phạm vi Đợt 1
+## Phạm vi Đợt 1 / Đợt 1.5
 
 Đợt 1 gồm menu chính, menu trong game, cài đặt, nút chung, tên tài nguyên cơ
 bản, nhãn trạng thái chung, thông báo hệ thống, độ khó, credits và màn hình thất
-bại. Công trình, nâng cấp, giao thương, nhiệm vụ, hướng dẫn và cốt truyện thuộc
-các đợt sau; không dịch chúng trong đợt này.
+bại.
+
+Đợt 1.5 (mở rộng trong cùng `phase1.keys`) thêm hướng dẫn (TUTORIAL_*), thanh
+HUD chính (BI_*), menu xây/nâng cấp, ghi chú trận/giao thương/nghiên cứu, bảng
+quân sự, giao thương/cửa hàng cơ bản, nhãn hạnh phúc/nhân công và một số tên
+công trình sớm — đủ để người chơi mới theo vòng chơi cốt lõi.
+
+Công trình chi tiết, nâng cấp từng cấp, chính sách đầy đủ, nhiệm vụ dài và cốt
+truyện thuộc các đợt sau; không dịch chúng trong đợt này.
