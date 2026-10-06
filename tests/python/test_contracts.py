@@ -59,12 +59,20 @@ def test_loaders_read_safe_fixtures_and_the_committed_skeleton() -> None:
     statuses = load_status_csv(ROOT / "localization/status.csv")
     assert len(translations) == len(statuses) == completeness.unique_recovered_keys
     assert tuple(row.key for row in translations) == tuple(row.key for row in statuses)
+    phase1_keys = frozenset((ROOT / "localization/phase1.keys").read_text(encoding="utf-8").splitlines())
     assert all(
         len(row.source_sha256) == 64 and all(char in "0123456789ABCDEF" for char in row.source_sha256)
-        and row.translation_vi == ""
         for row in translations
     )
-    assert all(row.status == "draft" and row.note == "" for row in statuses)
+    # Only selected Phase 1 keys are translated; every other known key stays empty.
+    assert all((row.translation_vi != "") == (row.key in phase1_keys) for row in translations)
+    for row in statuses:
+        if row.key in phase1_keys:
+            assert row.status == "reviewed"
+        elif row.status == "blocked":
+            assert row.note != ""
+        else:
+            assert row.status == "draft" and row.note == ""
     assert not any(row.key.startswith("<!MissingKey") for row in translations + statuses)
     source_path = ROOT / "workspace" / completeness.build_id / "probe/source/localisation/translations.csv"
     if source_path.is_file():
@@ -73,7 +81,9 @@ def test_loaders_read_safe_fixtures_and_the_committed_skeleton() -> None:
         assert tuple((row.key, row.source_sha256) for row in source.rows) == tuple(
             (row.key, row.source_sha256) for row in translations
         )
-    assert load_glossary_csv(ROOT / "localization/glossary.csv") == ()
+    glossary = load_glossary_csv(ROOT / "localization/glossary.csv")
+    assert len(glossary) == 28
+    assert all(term.source_term.strip() and term.translation_vi.strip() for term in glossary)
 
 
 def test_loader_preserves_bom_quoted_newline_exact_key_and_decomposed_unicode(tmp_path) -> None:
