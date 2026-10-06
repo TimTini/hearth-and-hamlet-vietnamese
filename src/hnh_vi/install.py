@@ -155,7 +155,7 @@ def _stage_copy(source: Path, target_pck: Path, expected_sha256: str) -> Path:
         _flush_to_disk(staging)
         if sha256_file(staging) != expected_sha256:
             raise ValueError("staging_verify_failed: staged copy does not match its source hash")
-    except Exception:
+    except BaseException:  # also Ctrl+C: never leave a staging file beside the game PCK
         staging.unlink(missing_ok=True)
         raise
     return staging
@@ -274,7 +274,7 @@ def _create_backup(plan: InstallPlan) -> BackupRecord:
         metadata_path = backup_dir / BACKUP_METADATA_NAME
         _write_backup_metadata(plan, backup_pck, metadata_path)
         record, _ = _load_backup_record(metadata_path, (plan.build_spec,))
-    except Exception:
+    except BaseException:  # also Ctrl+C: a half-written backup folder must not stay behind
         shutil.rmtree(backup_dir, ignore_errors=True)
         raise
     return record
@@ -364,10 +364,18 @@ def _verify_installed_game(plan: InstallPlan) -> None:
         raise ValueError("game EXE changed during the install")
 
 
-def _restore_backup_after_failed_install(
-    plan: InstallPlan, backup: BackupRecord, original_error: Exception,
-) -> ValueError:
-    """Put the verified backup back; the returned error is raised by the caller."""
+def _game_pck_was_swapped(plan: InstallPlan) -> bool:
+    """True when the game PCK is (or may be) the new artifact, even if the swap was interrupted."""
+    try:
+        return sha256_file(plan.target_pck) == plan.new_pck_sha256
+    except OSError:
+        return True  # unknown state: restoring from the verified backup is the safe choice
+
+
+def _restore_original_pck(
+    plan: InstallPlan, backup: BackupRecord, original_error: BaseException,
+) -> None:
+    """Put the verified backup back, or raise rollback_failed naming the backup to copy by hand."""
     staging = None
     try:
         staging = _stage_copy(backup.pck_path, plan.target_pck, plan.current_pck_sha256)
@@ -375,18 +383,14 @@ def _restore_backup_after_failed_install(
         if sha256_file(plan.target_pck) != plan.current_pck_sha256:
             raise ValueError("restored PCK does not match the original hash")
     except (OSError, ValueError) as rollback_error:
-        return ValueError(
+        raise ValueError(
             f"rollback_failed: the install failed ({original_error}) and restoring the backup "
             f"also failed ({rollback_error}). Restore by hand: copy \"{backup.pck_path}\" over "
             f"\"{plan.target_pck}\" while the game is closed."
-        )
+        ) from rollback_error
     finally:
         if staging is not None:
             staging.unlink(missing_ok=True)
-    return ValueError(
-        f"install_verification_failed: {original_error}. "
-        "The original game PCK was restored from the backup."
-    )
 
 
 def apply_install(plan: InstallPlan) -> BackupRecord:
@@ -406,28 +410,30 @@ def apply_install(plan: InstallPlan) -> BackupRecord:
         raise ValueError("build_artifact_mismatch: inputs changed since the plan was made")
 
     backup = _create_backup(plan)
+    staging = None
+    # BaseException on purpose: Ctrl+C or SystemExit must not leave a half-installed game.
     try:
         staging = _stage_copy(plan.source_pck, plan.target_pck, plan.new_pck_sha256)
-    except Exception:
-        shutil.rmtree(plan.backup_dir, ignore_errors=True)
-        raise
-
-    try:
         # Last look at the game right before the swap, in case Steam changed it meanwhile.
         _reject_link_entry(plan.target_pck)
         if not verify_game_dir(plan.game_dir, spec).ok:
             raise ValueError("unsupported_build: game files changed while preparing the install")
         os.replace(staging, plan.target_pck)
-    except Exception:
-        # The swap did not happen, so the game PCK is unchanged and the backup is not needed.
-        staging.unlink(missing_ok=True)
-        shutil.rmtree(plan.backup_dir, ignore_errors=True)
-        raise
-
-    try:
         _verify_installed_game(plan)
-    except Exception as error:
-        raise _restore_backup_after_failed_install(plan, backup, error) from error
+    except BaseException as error:
+        if staging is not None:
+            staging.unlink(missing_ok=True)
+        if not _game_pck_was_swapped(plan):
+            # The game PCK is unchanged, so the backup made for this attempt is not needed.
+            shutil.rmtree(plan.backup_dir, ignore_errors=True)
+            raise
+        _restore_original_pck(plan, backup, error)
+        if not isinstance(error, Exception):
+            raise  # interrupted: the original is back, let the interrupt continue
+        raise ValueError(
+            f"install_verification_failed: {error}. "
+            "The original game PCK was restored from the backup."
+        ) from error
     return backup
 
 
@@ -502,11 +508,20 @@ def apply_uninstall(plan: InstallPlan) -> None:
     if fresh_plan.current_pck_sha256 != plan.current_pck_sha256:
         raise _game_changed_error("the game PCK changed since the plan was made")
 
-    staging = _stage_copy(plan.source_pck, plan.target_pck, plan.new_pck_sha256)
+    staging = None
     try:
+        staging = _stage_copy(plan.source_pck, plan.target_pck, plan.new_pck_sha256)
+        # Staging a big PCK takes time, so look at the game again right before the swap.
+        _reject_link_entry(plan.target_pck)
+        _reject_link_entry(plan.game_exe)
+        if sha256_file(plan.target_pck) != plan.current_pck_sha256:
+            raise _game_changed_error("the game PCK changed while the restore was prepared")
+        if sha256_file(plan.game_exe) != plan.build_spec.exe_sha256.upper():
+            raise _game_changed_error("the game EXE changed while the restore was prepared")
         os.replace(staging, plan.target_pck)
-    except Exception:
-        staging.unlink(missing_ok=True)
+    except BaseException:
+        if staging is not None:
+            staging.unlink(missing_ok=True)
         raise
 
     try:

@@ -733,3 +733,141 @@ def test_find_latest_backup_reports_original_game(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="already_original"):
         install.find_latest_backup(world.game_dir, world.backup_root, (world.spec,))
+
+
+# ---- Interrupts and last checks -----------------------------------------------------------
+
+
+def raise_keyboard_interrupt(*arguments):
+    raise KeyboardInterrupt
+
+
+def test_interrupt_after_replace_restores_the_verified_backup(tmp_path: Path, monkeypatch) -> None:
+    world = make_world(tmp_path)
+
+    def interrupted_verification(plan):
+        assert world.game_pck.read_bytes() == ARTIFACT_PCK
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(install, "_verify_installed_game", interrupted_verification)
+
+    with pytest.raises(KeyboardInterrupt):
+        install_for_real(world)
+
+    assert world.game_pck.read_bytes() == ORIGINAL_PCK
+    backups = list((world.backup_root / "fixture").iterdir())
+    assert len(backups) == 1
+    assert (backups[0] / PCK_NAME).read_bytes() == ORIGINAL_PCK
+    assert sorted(path.name for path in world.game_dir.iterdir()) == [EXE_NAME, PCK_NAME]
+
+
+def test_interrupt_right_after_the_swap_still_restores_the_backup(tmp_path: Path, monkeypatch) -> None:
+    world = make_world(tmp_path)
+    real_replace = os.replace
+
+    def replace_then_interrupt(source, destination):
+        real_replace(source, destination)
+        if Path(destination) == world.game_pck:
+            raise KeyboardInterrupt
+
+    monkeypatch.setattr(install.os, "replace", replace_then_interrupt)
+
+    with pytest.raises(KeyboardInterrupt):
+        install_for_real(world)
+
+    assert world.game_pck.read_bytes() == ORIGINAL_PCK
+    assert sorted(path.name for path in world.game_dir.iterdir()) == [EXE_NAME, PCK_NAME]
+
+
+def test_interrupt_while_staging_leaves_game_clean_and_removes_attempt_backup(
+    tmp_path: Path, monkeypatch,
+) -> None:
+    world = make_world(tmp_path)
+    real_copy2 = shutil.copy2
+
+    def interrupted_copy2(source, destination, **kwargs):
+        real_copy2(source, destination, **kwargs)
+        if Path(destination).parent == world.game_dir:
+            raise KeyboardInterrupt
+
+    monkeypatch.setattr(install.shutil, "copy2", interrupted_copy2)
+
+    with pytest.raises(KeyboardInterrupt):
+        install_for_real(world)
+
+    assert world.game_pck.read_bytes() == ORIGINAL_PCK
+    assert sorted(path.name for path in world.game_dir.iterdir()) == [EXE_NAME, PCK_NAME]
+    assert list((world.backup_root / "fixture").iterdir()) == []
+
+
+def test_interrupt_while_backing_up_removes_the_half_written_backup(
+    tmp_path: Path, monkeypatch,
+) -> None:
+    world = make_world(tmp_path)
+    monkeypatch.setattr(install.shutil, "copy2", raise_keyboard_interrupt)
+
+    with pytest.raises(KeyboardInterrupt):
+        install_for_real(world)
+
+    assert world.game_pck.read_bytes() == ORIGINAL_PCK
+    assert list((world.backup_root / "fixture").iterdir()) == []
+
+
+def test_uninstall_stops_when_game_pck_changes_while_staging(tmp_path: Path, monkeypatch) -> None:
+    world = make_world(tmp_path)
+    record = install_for_real(world)
+    plan = world.plan_uninstall(record.metadata_path)
+    real_copy2 = shutil.copy2
+
+    def copy2_while_steam_updates(source, destination, **kwargs):
+        real_copy2(source, destination, **kwargs)
+        if Path(destination).parent == world.game_dir:
+            world.game_pck.write_bytes(b"Steam updated while the restore was staged")
+
+    monkeypatch.setattr(install.shutil, "copy2", copy2_while_steam_updates)
+
+    with pytest.raises(ValueError, match="game_changed_since_install"):
+        apply_uninstall(plan)
+
+    assert world.game_pck.read_bytes() == b"Steam updated while the restore was staged"
+    assert sorted(path.name for path in world.game_dir.iterdir()) == [EXE_NAME, PCK_NAME]
+
+
+def test_uninstall_stops_when_game_exe_changes_while_staging(tmp_path: Path, monkeypatch) -> None:
+    world = make_world(tmp_path)
+    record = install_for_real(world)
+    plan = world.plan_uninstall(record.metadata_path)
+    real_copy2 = shutil.copy2
+
+    def copy2_while_exe_changes(source, destination, **kwargs):
+        real_copy2(source, destination, **kwargs)
+        if Path(destination).parent == world.game_dir:
+            world.game_exe.write_bytes(b"new exe from a Steam update")
+
+    monkeypatch.setattr(install.shutil, "copy2", copy2_while_exe_changes)
+
+    with pytest.raises(ValueError, match="game_changed_since_install"):
+        apply_uninstall(plan)
+
+    assert world.game_pck.read_bytes() == ARTIFACT_PCK
+    assert sorted(path.name for path in world.game_dir.iterdir()) == [EXE_NAME, PCK_NAME]
+
+
+def test_interrupt_while_staging_uninstall_leaves_installed_pck(tmp_path: Path, monkeypatch) -> None:
+    world = make_world(tmp_path)
+    record = install_for_real(world)
+    plan = world.plan_uninstall(record.metadata_path)
+    real_copy2 = shutil.copy2
+
+    def interrupted_copy2(source, destination, **kwargs):
+        real_copy2(source, destination, **kwargs)
+        if Path(destination).parent == world.game_dir:
+            raise KeyboardInterrupt
+
+    monkeypatch.setattr(install.shutil, "copy2", interrupted_copy2)
+
+    with pytest.raises(KeyboardInterrupt):
+        apply_uninstall(plan)
+
+    assert world.game_pck.read_bytes() == ARTIFACT_PCK
+    assert sorted(path.name for path in world.game_dir.iterdir()) == [EXE_NAME, PCK_NAME]
