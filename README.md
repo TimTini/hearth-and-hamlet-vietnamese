@@ -2,8 +2,8 @@
 
 Dự án Việt hóa **Hearth and Hamlet** theo văn phong tự nhiên, dễ chơi.
 
-Trạng thái hiện tại: thiết kế đã được chốt cho game phiên bản 1.1.0; script
-cài/gỡ bản preview đã có nhưng chưa có gói phát hành. Theo dõi checkpoint tại
+Trạng thái hiện tại: Phase 1 preview (111 key giao diện) đã dịch, build candidate và dry-run cài/gỡ đã chạy trên build Steam `25600292`. **Chưa** apply vào game trong biên plan tự động — xem
+[`docs/phase-1-smoke-checklist.md`](docs/phase-1-smoke-checklist.md). Theo dõi checkpoint tại
 [`work/hearth-and-hamlet-vietnamese-progress.md`](work/hearth-and-hamlet-vietnamese-progress.md).
 
 Repo này chỉ lưu script, kiểm thử và nội dung dịch do dự án tạo ra. Không
@@ -108,3 +108,9 @@ Cả hai script mặc định là dry-run: chỉ kiểm tra và in kế hoạch,
 
 Test cài/gỡ chỉ dùng thư mục game giả lập trong thư mục tạm; không test nào ghi vào
 game Steam thật.
+
+## Checkpoint apply / smoke (ngoài biên tự động)
+
+Checklist xác minh dry-run và các bước cần ủy quyền tường minh (`-Apply`,
+launch game, smoke UI, gỡ) nằm tại
+[`docs/phase-1-smoke-checklist.md`](docs/phase-1-smoke-checklist.md).

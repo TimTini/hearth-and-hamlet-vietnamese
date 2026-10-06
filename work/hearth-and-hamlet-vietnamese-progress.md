@@ -234,3 +234,20 @@ nhầm. Chưa có `-Apply` hoặc game launch nào được thực hiện.
 - Lưu ý runtime: danh sách ngôn ngữ trong game là `native_names` ở script
   `language.gd`; chưa xác minh bản vi hiện đã có mục chọn "Tiếng Việt" hay chưa,
   cần kiểm tra khi smoke (chuyển cho Task 7).
+
+## Partial preview — Task 7 handoff dry-run, 2026-10-06
+
+- Verification tươi: `uv sync --locked` OK; pytest **415 passed, 2 skipped**;
+  Ruff sạch; `git diff --check` sạch.
+- Validate Phase 1: exit 0, 0 blocking; coverage selected 111/111 reviewed;
+  `source_complete=false`.
+- Rebuild: `scripts/build.ps1` →
+  `dist/25600292/Hearth-and-Hamlet-vi-preview-1.1.0.pck` SHA-256
+  `59A0EB03…03431`; metadata `preview` / `fallback_locale=en` / 111 keys.
+- Install dry-run (không `-Apply`): exit 0; backup kế hoạch dưới
+  `%LOCALAPPDATA%\HearthAndHamletVietnamese\backups\25600292\20261006T041554245779Z`.
+- Uninstall dry-run khi chưa apply: `already_original` (đúng).
+- EXE/PCK gốc sau build + dry-run vẫn `7D37BBF3…F9A2A` / `7D5A2113…E0201`.
+- GameDir: `<GameDir>`.
+- Tài liệu: `docs/phase-1-smoke-checklist.md`. Apply/launch/smoke vẫn cần
+  ủy quyền tường minh; mục mở: locale hiện "VI", font/nút, 27 key thiếu.
