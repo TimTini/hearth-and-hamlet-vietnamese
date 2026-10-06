@@ -151,26 +151,26 @@
 - Consumes: verified EXE and checksum from Task 2.
 - Produces: public installation/manual recovery documentation, tag `v1.1.0-vi.1`, and a GitHub Release with exactly the EXE plus checksum asset.
 
-- [ ] **Step 1: Write/update documentation**
+- [x] **Step 1: Write/update documentation**
 
   Put one-click download/install first; explain auto-detection and paste fallback, backup/restore, supported build, SmartScreen/unsigned warning and checksum verification. Retain the source-build/manual PowerShell path for advanced users and clearly distinguish it from the no-runtime installer.
 
-- [ ] **Step 2: Run documentation/security scans**
+- [x] **Step 2: Run documentation/security scans**
 
   Search tracked files and the new commit range for credentials, email/home paths, private snapshot names, PCK/EXE/DLL artifacts and oversized blobs. Inspect binary strings/resources for local paths or secret-like values. Confirm only `main` exists locally/remotely.
 
-- [ ] **Step 3: Obtain independent whole-change review**
+- [x] **Step 3: Obtain independent whole-change review**
 
   Reviewer checks the spec, plan, full diff, tests, packaging inputs, licensing, backup/rollback behavior and public-release contents. Fix every Critical/Important finding and re-review the fix diff.
 
-- [ ] **Step 4: Perform fresh final verification**
+- [x] **Step 4: Perform fresh final verification**
 
   Re-run full regression checks and real copied-game install/restore E2E against the exact release EXE. Recompute SHA-256 after all checks.
 
-- [ ] **Step 5: Commit and push `main`**
+- [x] **Step 5: Commit and push `main`**
 
   Commit only documentation/release checklist changes, verify clean status, push `main`, and verify local `HEAD` equals `origin/main`.
 
-- [ ] **Step 6: Create and verify GitHub Release**
+- [x] **Step 6: Create and verify GitHub Release**
 
   Create annotated tag/release `v1.1.0-vi.1`, upload exactly `Hearth-and-Hamlet-Tieng-Viet-Setup.exe` and `Hearth-and-Hamlet-Tieng-Viet-Setup.exe.sha256`, then download both to a new temporary directory and verify the checksum, file name, asset count and public release URL.

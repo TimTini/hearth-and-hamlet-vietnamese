@@ -12,6 +12,10 @@
     <PublishSingleFile>true</PublishSingleFile>
     <PublishTrimmed>true</PublishTrimmed>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+    <DebuggerSupport>false</DebuggerSupport>
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
     <InstallerZstdPath Condition="'$(InstallerZstdPath)' == ''"></InstallerZstdPath>
     <InstallerDeltaPath Condition="'$(InstallerDeltaPath)' == ''"></InstallerDeltaPath>
   </PropertyGroup>
