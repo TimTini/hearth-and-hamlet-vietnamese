@@ -2,9 +2,13 @@ import csv
 import hashlib
 import json
 import os
+import stat
 import subprocess
 from pathlib import Path
 
+import pytest
+
+from hnh_vi import cli
 from hnh_vi.completeness import load_source_completeness
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -221,6 +225,96 @@ def test_invalid_input_contract_failure_and_output_failure_have_distinct_exit_co
     assert failed_output.returncode == 5
     assert json.loads(failed_output.stdout.decode("utf-8"))["ok"] is False
     assert translations.read_bytes() == translations_before
+
+
+def test_skeleton_directory_status_target_leaves_both_outputs_unchanged(tmp_path: Path) -> None:
+    source = write_source(tmp_path / "source.csv", [
+        ("existing_key", "Synthetic existing sentence."),
+        ("added_key", "Synthetic added sentence."),
+    ])
+    manifest = write_completeness(tmp_path / "source-completeness.json", source)
+    translations = tmp_path / "translations.vi.csv"
+    existing_hash = hashlib.sha256(b"Synthetic existing sentence.").hexdigest().upper()
+    write_csv(translations, ("key", "source_sha256", "translation_vi"), [
+        ("existing_key", existing_hash, "Bản dịch đã có"),
+    ])
+    status_directory = tmp_path / "status-target"
+    status_directory.mkdir()
+    status_file = status_directory / "sentinel.csv"
+    status_file.write_bytes(b"status sentinel\n")
+    translations_before = translations.read_bytes()
+    status_before = status_file.read_bytes()
+
+    result = run_cli(
+        "skeleton", *localization_args(source, manifest, translations, status_directory),
+    )
+
+    assert result.returncode == 5
+    report = json.loads(result.stdout.decode("utf-8"))
+    assert report["error"] == "skeleton_write_failed"
+    assert translations.read_bytes() == translations_before
+    assert status_directory.is_dir()
+    assert status_file.read_bytes() == status_before
+    assert list(status_directory.iterdir()) == [status_file]
+    assert not list(tmp_path.glob("*.tmp"))
+
+
+def test_skeleton_read_only_status_target_leaves_both_outputs_unchanged(tmp_path: Path) -> None:
+    source = write_source(tmp_path / "source.csv", [
+        ("existing_key", "Synthetic existing sentence."),
+        ("added_key", "Synthetic added sentence."),
+    ])
+    manifest = write_completeness(tmp_path / "source-completeness.json", source)
+    translations = tmp_path / "translations.vi.csv"
+    statuses = tmp_path / "status.csv"
+    existing_hash = hashlib.sha256(b"Synthetic existing sentence.").hexdigest().upper()
+    write_csv(translations, ("key", "source_sha256", "translation_vi"), [
+        ("existing_key", existing_hash, "Bản dịch đã có"),
+    ])
+    write_csv(statuses, ("key", "status", "note"), [("existing_key", "reviewed", "Ghi chú đã có")])
+    translations_before = translations.read_bytes()
+    statuses_before = statuses.read_bytes()
+    statuses.chmod(stat.S_IREAD)
+    try:
+        result = run_cli(
+            "skeleton", *localization_args(source, manifest, translations, statuses),
+        )
+        assert result.returncode == 5
+        report = json.loads(result.stdout.decode("utf-8"))
+        assert report["error"] == "skeleton_write_failed"
+        assert translations.read_bytes() == translations_before
+        assert statuses.read_bytes() == statuses_before
+        assert not list(tmp_path.glob("*.tmp"))
+    finally:
+        statuses.chmod(stat.S_IREAD | stat.S_IWRITE)
+
+
+def test_output_replace_failure_rolls_back_first_file_and_cleans_temps(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    translations = tmp_path / "translations.csv"
+    statuses = tmp_path / "statuses.csv"
+    translations.write_bytes(b"old translations\n")
+    statuses.write_bytes(b"old statuses\n")
+    translations_before = translations.read_bytes()
+    statuses_before = statuses.read_bytes()
+    original_replace = cli.os.replace
+    fail_status_replace = True
+
+    def fail_once(source: str | os.PathLike[str], target: str | os.PathLike[str]) -> None:
+        nonlocal fail_status_replace
+        if Path(target) == statuses and fail_status_replace:
+            fail_status_replace = False
+            raise PermissionError("synthetic replacement denial")
+        original_replace(source, target)
+
+    monkeypatch.setattr(cli.os, "replace", fail_once)
+    with pytest.raises(PermissionError, match="synthetic replacement denial"):
+        cli._write_texts_atomic(((translations, "new translations\n"), (statuses, "new statuses\n")))
+
+    assert translations.read_bytes() == translations_before
+    assert statuses.read_bytes() == statuses_before
+    assert not list(tmp_path.glob("*.tmp"))
 
 
 def test_verify_game_checks_only_the_synthetic_fixture_and_reports_build_drift(tmp_path: Path) -> None:

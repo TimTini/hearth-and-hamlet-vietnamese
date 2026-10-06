@@ -185,3 +185,16 @@ nhầm. Chưa có `-Apply` hoặc game launch nào được thực hiện.
 - Source-leak check: không real marker hoặc full English sentence trong các file
   Task 1; writer/gate Task 3 không đổi. Không ghi game, tạo snapshot thật hoặc
   build artifact. Tiếp theo controller review Task 1 trước Task 2.
+
+## Partial preview — Task 3 fix round 3, 2026-10-06
+
+- Thread Codex `01a10c6a-5b55-7392-a969-1388d25c346c` dừng giữa chừng vì usage
+  limit trong lúc worker đang sửa pair-consistency cho skeleton dual-write.
+- Tasks 1–2 đã complete trên nhánh `codex/phase-1-localization`; Task 3 CLI
+  skeleton đã có commit `77083e6` nhưng review Important còn mở:
+  thay translations trước khi status replace thất bại.
+- Fix round 3 (chưa commit): `_write_texts_atomic` backup atomic rồi rollback
+  mọi file đã replace nếu replace sau lỗi; vẫn chặn destination không phải file
+  thường. Test: directory status, read-only status, synthetic mid-replace fail.
+- Verification local: focused CLI 10 passed; full `uv run pytest -q` xanh;
+  Ruff sạch trên `cli.py` / `test_cli.py`. Chưa commit — chờ review độc lập.

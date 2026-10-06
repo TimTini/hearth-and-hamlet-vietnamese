@@ -140,12 +140,18 @@ def _csv_text(headers: tuple[str, ...], rows: tuple[tuple[str, ...], ...]) -> st
 
 
 def _write_texts_atomic(outputs: tuple[tuple[Path, str], ...]) -> None:
+    """Write several text files, rolling back earlier replaces if any later replace fails."""
     for path, _ in outputs:
         if not path.parent.is_dir():
             raise OSError("output_directory_missing")
+        if path.exists() and not path.is_file():
+            raise OSError("output_not_regular_file")
         for entry in (path, *path.parents):
             _reject_linked_output(entry)
-    temporaries = []
+
+    temporaries: list[tuple[Path, Path]] = []
+    backups: dict[Path, Path] = {}
+    replaced: list[Path] = []
     try:
         for path, text in outputs:
             with tempfile.NamedTemporaryFile(
@@ -154,11 +160,33 @@ def _write_texts_atomic(outputs: tuple[tuple[Path, str], ...]) -> None:
                 temporary = Path(stream.name)
                 temporaries.append((path, temporary))
                 stream.write(text)
+
+        # Keep a byte-for-byte copy of any existing destination before the first replace.
+        for path, _ in temporaries:
+            if path.is_file():
+                with tempfile.NamedTemporaryFile(
+                    mode="wb", dir=path.parent, suffix=".bak", delete=False,
+                ) as stream:
+                    backup = Path(stream.name)
+                    stream.write(path.read_bytes())
+                backups[path] = backup
+
         for path, temporary in temporaries:
             os.replace(temporary, path)
+            replaced.append(path)
+    except Exception:
+        for path in replaced:
+            backup = backups.pop(path, None)
+            if backup is not None:
+                os.replace(backup, path)
+            else:
+                path.unlink(missing_ok=True)
+        raise
     finally:
         for _, temporary in temporaries:
             temporary.unlink(missing_ok=True)
+        for backup in backups.values():
+            backup.unlink(missing_ok=True)
 
 
 def _check_output_paths(source: Path, completeness: Path, translations: Path, statuses: Path) -> None:
