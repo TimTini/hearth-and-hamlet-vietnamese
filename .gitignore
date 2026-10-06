@@ -1,0 +1,50 @@
+# Local toolchain and Python environment
+.worktrees/
+.tools/
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist-packages/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Extracted/proprietary game data and generated packages
+extracted/
+workspace/
+dist/
+backups/
+*.pck
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Local translation drafts, one-off helpers and internal progress notes
+work/
+
+# Secrets and local credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials.json
+steam_cookies*
+cookies.txt
+
+# Temporary / backup / agent-local files
+*.tmp
+*.bak
+*.log
+*.swp
+*~
+.DS_Store
+Thumbs.db
+.cursor/
+.codex/
+.agent-stores/

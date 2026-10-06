@@ -1,0 +1,12 @@
+key,en,fr
+fixture_button,Sample button,Bouton exemple
+fixture_unicode,Sample Unicode,Échantillon
+fixture_vi_missing,Only English text,Seulement anglais
+fixture_placeholder,Hello %s,Bonjour %s
+fixture_multiline,"First line
+second line","Premiere ligne
+deuxieme ligne"
+fixture_Case,Upper case key,Cle majuscule
+fixture_case,Lower case key,Cle minuscule
+fixture_nfc,Needs NFC,Besoin NFC
+fixture_escape,Line one\nLine two,Ligne un\ndeux

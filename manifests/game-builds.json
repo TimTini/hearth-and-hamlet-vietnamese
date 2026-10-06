@@ -1,0 +1,13 @@
+{
+  "builds": [
+    {
+      "build_id": "25600292",
+      "exe_version": "1.1.0.0",
+      "confirmed_on": "2026-10-05",
+      "exe_name": "Hearth and Hamlet.exe",
+      "exe_sha256": "7D37BBF3BD6AB823F2659CE410FE792EFF2A51D1280FC211E3175C2D412F9A2A",
+      "pck_name": "Hearth and Hamlet.pck",
+      "pck_sha256": "7D5A2113B5D63B40605413A70B707DC7F56AFC7DE02BCE34760E227BFE6E0201"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "build_id": "synthetic",
+  "pck_sha256": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+  "recovered_csv_sha256": "3DCF8653707C6AEA0A1889BAC2FBC3681DE45526840F83145C5EEEF5C864C348",
+  "total_rows": 25,
+  "recovered_rows": 22,
+  "unique_recovered_keys": 10,
+  "duplicate_key_groups": 9,
+  "duplicate_extra_rows": 12,
+  "unrecovered_rows": 3,
+  "fallback_locale": "en",
+  "policy": "partial_with_english_fallback",
+  "source_complete": false
+}

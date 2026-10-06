@@ -1,0 +1,27 @@
+﻿key,en,de
+<!MissingKey:synthetic first>,Synthetic missing first.,Fehlt
+group1,Synthetic item 1.,Erste
+group2,Synthetic item 2.,Zweite
+group3,Synthetic item 3.,Dritte
+group4,Synthetic item 4.,Vierte
+group5,Synthetic item 5.,Fünfte
+group6,Synthetic item 6.,Sechste
+group7,Synthetic item 7.,Siebte
+group8,Synthetic item 8.,Achte
+group9,Synthetic item 9.,Neunte
+<!MissingKey:synthetic middle>,Synthetic missing middle.,Fehlt
+multiline,"Synthetic line one,
+synthetic line two.",Mehrzeilig
+group3,Synthetic item 3.,Andere dritte
+group2,Synthetic item 2.,Andere zweite
+group1,Synthetic item 1.,Andere erste
+group4,Synthetic item 4.,Andere vierte
+group5,Synthetic item 5.,Andere fünfte
+group6,Synthetic item 6.,Andere sechste
+group7,Synthetic item 7.,Andere siebte
+group8,Synthetic item 8.,Andere achte
+group9,Synthetic item 9.,Andere neunte
+group1,Synthetic item 1.,Noch eine erste
+group2,Synthetic item 2.,Noch eine zweite
+group3,Synthetic item 3.,Noch eine dritte
+<!MissingKey:synthetic last>,Synthetic missing last.,Fehlt

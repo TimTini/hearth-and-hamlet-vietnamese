@@ -1,0 +1,55 @@
+source_term,translation_vi,scope,note
+Gold,vàng,,Tài nguyên
+Wood,gỗ,,Tài nguyên
+Stone,đá,,Tài nguyên
+Iron,sắt,,Tài nguyên
+Food,lương thực,,Tài nguyên; không dùng 'thức ăn'
+Magic,phép thuật,,Tài nguyên/chủ đề phép thuật
+Worker,nhân công,,Người làm việc trong công trình
+Policy,chính sách,,
+Soldier,binh lính,,
+Upkeep,chi phí duy trì,,Chi phí nuôi quân/công trình mỗi chu kỳ
+Enemy,địch,,Dùng 'quân địch'
+Difficulty,độ khó,,
+Town,thị trấn,,Nơi người chơi xây dựng
+Trade,giao thương,,
+Research,nghiên cứu,,
+Starvation,nạn đói,,
+Population,dân số,,
+Save,lưu,,Danh từ: 'bản lưu'; động từ: 'lưu'
+Slot,ô lưu,,Chỉ dùng cho ô lưu game
+Load,tải,,Tải game / tải bản lưu
+Exit,thoát,,
+Language,ngôn ngữ,,
+Settings,cài đặt,,
+Options,tùy chọn,,
+Gentle,Nhẹ nhàng,DIFFICULTY_EASY,Tên mức độ khó
+Steady,Ổn định,DIFFICULTY_NORMAL,Tên mức độ khó
+Challenging,Thử thách,DIFFICULTY_HARD,Tên mức độ khó
+Intense,Khốc liệt,DIFFICULTY_VERY_HARD,Tên mức độ khó
+Blueprint,bản thiết kế,,Thiết kế/công nghệ mở khóa công trình
+Expedition,viễn chinh,,Đoàn đi giao thương hoặc thám hiểm
+Happiness,hạnh phúc,,Chỉ số hạnh phúc dân
+Conscription,trưng binh,,Tuyển dân vào quân
+Amenities,tiện nghi,,
+Caravan,đoàn buôn,,
+Spare workers,nhân công dư,,Nhân công chưa phân công
+Tithes,thuế thập phân,,Chính sách thuế nhà thờ
+Shop,cửa hàng,,
+Sanitation,vệ sinh,,Hạng mục thưởng hạnh phúc từ đường/hạ tầng
+Quarry,mỏ đá,,Công trình khai thác đá
+Warehouse,kho,,Kho chứa tài nguyên
+Moat,hào nước,,Phòng thủ quanh tường thành
+Shipwright,xưởng đóng tàu,,
+Alchemist,giả kim,,Nhãn ngắn / trang nâng cấp
+Blacksmith,lò rèn,,
+Carpenter,thợ mộc,,
+Hunting,săn bắn,,
+Fishing,đánh cá,,Hoạt động / trang nâng cấp
+Swamp,đầm lầy,,
+Guards,vệ binh,,Trang nâng cấp thị vệ
+Skilled Labour,lao động lành nghề,,Hệ số nhân công lành nghề
+Quest,nhiệm vụ,,
+Undead,xác sống,,Loài undead; dùng 'xác sống' trong UI
+Wizard,pháp sư,,
+Hero,anh hùng,,
