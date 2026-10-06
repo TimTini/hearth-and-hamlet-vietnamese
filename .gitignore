@@ -4,10 +4,14 @@
 .venv/
 __pycache__/
 *.py[cod]
+*.egg-info/
+.eggs/
+dist-packages/
 .pytest_cache/
 .ruff_cache/
-*.egg-info/
-build/
+.mypy_cache/
+.coverage
+htmlcov/
 
 # Extracted/proprietary game data and generated packages
 extracted/
@@ -17,8 +21,34 @@ backups/
 *.pck
 *.exe
 *.dll
+*.so
+*.dylib
 
-# Temporary files
+# Local translation draft dumps / apply helpers leftovers
+work/*.json
+work/*-to-revisit.csv
+work/drafts-to-translate.csv
+work/_inventory_drafts.py
+work/validate-out.json
+
+# Secrets and local credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials.json
+steam_cookies*
+cookies.txt
+
+# Temporary / backup / agent-local files
 *.tmp
 *.bak
 *.log
+*.swp
+*~
+.DS_Store
+Thumbs.db
+.cursor/
+.codex/
+.agent-stores/
