@@ -2,8 +2,8 @@
 
 Dự án Việt hóa **Hearth and Hamlet** theo văn phong tự nhiên, dễ chơi.
 
-Trạng thái hiện tại: thiết kế đã được chốt cho game phiên bản 1.1.0; chưa có
-gói cài thử. Theo dõi checkpoint tại
+Trạng thái hiện tại: thiết kế đã được chốt cho game phiên bản 1.1.0; script
+cài/gỡ bản preview đã có nhưng chưa có gói phát hành. Theo dõi checkpoint tại
 [`work/hearth-and-hamlet-vietnamese-progress.md`](work/hearth-and-hamlet-vietnamese-progress.md).
 
 Repo này chỉ lưu script, kiểm thử và nội dung dịch do dự án tạo ra. Không
@@ -59,7 +59,7 @@ Tên EXE/PCK trong manifest phải là tên file, không chứa đường dẫn.
 
 Kiểm thử CLI dùng game giả lập trong thư mục tạm; contract skeleton có thể đối
 chiếu CSV phục hồi trong workspace bị ignore. Không test nào mở hoặc chạy game
-đã cài. Script cài/gỡ chưa được triển khai.
+đã cài.
 
 ## Extraction và probe chỉ đọc
 
@@ -74,3 +74,37 @@ Output chỉ nằm dưới `workspace/<build-id>/` bị ignore. Extraction từ 
 không rỗng với `workspace_source_not_empty`; không tự xóa hoặc dùng lại CSV cũ.
 Build thật hiện chưa phục hồi đủ: còn 27/1.849 key chưa xác minh. Preview, nếu
 được tạo ở các bước sau, phải giữ fallback tiếng Anh và báo rõ giới hạn nguồn.
+
+## Cài và gỡ bản preview
+
+```powershell
+scripts/install.ps1   -GameDir "<thư mục game>" -Artifact "dist/<build-id>/Hearth-and-Hamlet-vi-preview-1.1.0.pck" [-Apply]
+scripts/uninstall.ps1 -GameDir "<thư mục game>" [-Backup "<thư mục backup>"] [-Apply]
+```
+
+Cả hai script mặc định là dry-run: chỉ kiểm tra và in kế hoạch, không ghi gì. Chỉ
+`-Apply` mới ghi thật. Metadata của artifact được đọc từ file `.json` cùng tên.
+
+- Install từ chối build không hỗ trợ (hash EXE/PCK không khớp
+  `manifests/game-builds.json`), artifact không khớp metadata hoặc build nguồn,
+  artifact diagnostic (thư mục `diagnostic`, metadata diagnostic), và mọi file/thư
+  mục là symlink, junction hoặc hard link ở PCK game hay đường dẫn backup.
+- Trước khi thay PCK, script tạo backup mới (không bao giờ ghi đè backup cũ) tại
+  `%LOCALAPPDATA%\HearthAndHamletVietnamese\backups\<build-id>\<UTC timestamp>\`
+  gồm bản PCK gốc và `backup.json` có hash; backup được đọc lại và kiểm tra hash.
+- PCK mới được copy sang file tạm cùng thư mục game (cùng volume), kiểm tra
+  SHA-256, rồi `os.replace`. Lỗi trước replace thì PCK game không đổi; lỗi xác minh
+  sau replace thì PCK được phục hồi ngay từ backup vừa tạo.
+- Uninstall chỉ chấp nhận backup có metadata hợp lệ và hash khớp bản gốc của
+  build được hỗ trợ. Không có `-Backup` thì dùng backup mới nhất khớp PCK đang cài.
+  Nếu Steam đã cập nhật game sau khi cài (EXE/PCK khác bản đã cài), script từ chối
+  ghi đè và nhắc dùng Steam "Verify integrity of game files" hoặc backup phù hợp.
+- Khi `-Apply`, PowerShell giữ handle `FileShare.Read` trên EXE game trong lúc
+  Python chạy. PCK game không thể khóa kiểu này vì nó phải được thay; Python kiểm
+  tra lại hash EXE/PCK ngay trước và sau khi replace, và replace thất bại nếu game
+  đang mở PCK (khi đó PCK giữ nguyên, backup vừa tạo bị xóa).
+- Backup cho một lần cài chỉ được giữ khi PCK game thực sự đã bị thay. Lỗi
+  `rollback_failed` in rõ đường dẫn backup để copy tay vào thư mục game.
+
+Test cài/gỡ chỉ dùng thư mục game giả lập trong thư mục tạm; không test nào ghi vào
+game Steam thật.
