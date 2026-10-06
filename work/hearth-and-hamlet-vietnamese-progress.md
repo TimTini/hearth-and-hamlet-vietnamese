@@ -251,3 +251,13 @@ nhầm. Chưa có `-Apply` hoặc game launch nào được thực hiện.
 - GameDir: `<GameDir>`.
 - Tài liệu: `docs/phase-1-smoke-checklist.md`. Apply/launch/smoke vẫn cần
   ủy quyền tường minh; mục mở: locale hiện "VI", font/nút, 27 key thiếu.
+
+## Apply checkpoint — preview installed, 2026-10-06
+
+- User-authorized -Apply after dry-run + Task 7 handoff.
+- GameDir: <GameDir>
+- Artifact: dist/25600292/Hearth-and-Hamlet-vi-preview-1.1.0.pck
+- EXE sau apply: vẫn 7D37BBF3BD6AB823F2659CE410FE792EFF2A51D1280FC211E3175C2D412F9A2A
+- PCK sau apply: B04247D059A8B4CEC654211179CBEB42A27FDF7CD7B5B548A29C47A6EDB593D8 (khớp artifact)
+- Backup gốc: %LOCALAPPDATA%\HearthAndHamletVietnamese\backups\25600292\<UTC timestamp>
+- Chưa launch game / smoke UI trong session này.
